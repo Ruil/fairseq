@@ -146,7 +146,7 @@ class LanguageModelingTask(FairseqTask):
         for k in itertools.count():
             split_k = split + (str(k) if k > 0 else '')
             path = os.path.join(self.args.data, split_k)
-
+            #print('path: ', path)
             if self.args.raw_text and IndexedRawTextDataset.exists(path):
                 ds = IndexedRawTextDataset(path, self.dictionary)
             elif not self.args.raw_text and IndexedDataset.exists(path):
@@ -159,7 +159,8 @@ class LanguageModelingTask(FairseqTask):
                     break
                 else:
                     raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
-
+            print('mode: ', self.args.sample_break_mode)
+            #sys.exit()
             loaded_datasets.append(
                 TokenBlockDataset(
                     ds, ds.sizes, self.args.tokens_per_sample,
@@ -176,10 +177,15 @@ class LanguageModelingTask(FairseqTask):
         if len(loaded_datasets) == 1:
             dataset = loaded_datasets[0]
             sizes = dataset.sizes
+            #print('sizes 1: ', sizes)
         else:
             dataset = ConcatDataset(loaded_datasets)
             sizes = np.concatenate([ds.sizes for ds in loaded_datasets])
-
+            #print('sizes 2: ', sizes)
+           
+        #print(dataset.sizes)
+      
+        #sys.exit()
         add_eos_for_other_targets = self.args.sample_break_mode is not None and self.args.sample_break_mode != 'none'
 
         self.datasets[split] = MonolingualDataset(

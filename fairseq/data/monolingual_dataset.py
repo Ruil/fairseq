@@ -83,6 +83,10 @@ class MonolingualDataset(FairseqDataset):
         else:
             source = self.dataset[index]
             target = None
+        print('id: ', index)
+        print('source: ', source)
+        print('target: ', target)
+        #sys.exit()
         return {'id': index, 'source': source, 'target': target}
 
     def __len__(self):
@@ -118,7 +122,10 @@ class MonolingualDataset(FairseqDataset):
                 target = target[0]
         else:
             target = future_target
-
+        
+        print('target 0: ', target)
+        print('source: ', source)
+        print('target: ', self._filter_vocab(target))
         return source, self._filter_vocab(target)
 
     def _filter_vocab(self, target):

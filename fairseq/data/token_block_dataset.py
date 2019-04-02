@@ -38,19 +38,26 @@ class TokenBlockDataset(FairseqDataset):
         self.eos = eos
         self.include_targets = include_targets
         self.slice_indices = []
-
+        print('sizes: ', sizes)
+        print('len of sizes: ', len(sizes))
+   
         assert len(dataset) == len(sizes)
         sizes = np.array(sizes, dtype=int)
         if break_mode is None or break_mode == 'none':
             total_size = sum(sizes)
+            print('total size: ', total_size)
+            #sys.exit()
             length = math.ceil(total_size / block_size)
-
+            print('block_size: ', block_size)
+            #sys.exit()
             def block_at(i):
                 start = i * block_size
                 end = min(start + block_size, total_size)
                 return (start, end)
 
             self.slice_indices = [block_at(i) for i in range(length)]
+            print('indices: ', self.slice_indices)
+            #sys.exit()
         elif break_mode == 'complete':
             tok_idx = 0
             sz_idx = 0
@@ -97,6 +104,8 @@ class TokenBlockDataset(FairseqDataset):
                 start_offset,  # starting offset within starting index
                 ds_idx,  # ending index in dataset
             )
+        print('map: ', self.block_to_dataset_index)
+        #sys.exit()
         assert ds_remaining == 0
         assert ds_idx == len(self.dataset) - 1
 
@@ -110,6 +119,8 @@ class TokenBlockDataset(FairseqDataset):
         s, e = start_offset, start_offset + length
         item = buffer[s:e]
 
+        print('include targets: ', self.include_targets)
+        #sys.exit()
         if self.include_targets:
             # *target* is the original sentence (=item)
             # *source* is rotated left by 1 (maybe left-padded with eos)
@@ -125,6 +136,7 @@ class TokenBlockDataset(FairseqDataset):
                     past_target = buffer[s - 2:e - 2]
 
             return source, item, past_target
+        
         return item
 
     def __len__(self):
