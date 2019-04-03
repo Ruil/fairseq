@@ -1,4 +1,4 @@
-# Copyright (c) 2017-present, Facebook, Inc.
+# (c) 2017-present, Facebook, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the LICENSE file in
@@ -12,13 +12,14 @@ import os
 import torch
 
 from fairseq.tokenizer import tokenize_line
+from fairseq.tokenizer import sentence_tokenize_line
 from fairseq.binarizer import safe_readline
 from fairseq.data import data_utils
 
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>'):
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', sentence_tokenizer=False):
         self.unk_word, self.pad_word, self.eos_word = unk, pad, eos
         self.symbols = []
         self.count = []
@@ -29,6 +30,9 @@ class Dictionary(object):
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
         self.nspecial = len(self.symbols)
+        self.sentence_tokenizer = sentence_tokenizer
+        #self.meta_keys = ['sentence_tokenizer']
+        #self.meta_vals = [sentence_tokenizer]
 
     def __eq__(self, other):
         return self.indices == other.indices
@@ -156,7 +160,7 @@ class Dictionary(object):
         return self.unk_index
 
     @classmethod
-    def load(cls, f, ignore_utf_errors=False):
+    def load(cls, f, sentence_tokenizer=False, ignore_utf_errors=False):
         """Loads the dictionary from a text file with the format:
 
         ```
@@ -169,17 +173,17 @@ class Dictionary(object):
             try:
                 if not ignore_utf_errors:
                     with open(f, 'r', encoding='utf-8') as fd:
-                        return cls.load(fd)
+                        return cls.load(fd, sentence_tokenizer=sentence_tokenizer)
                 else:
                     with open(f, 'r', encoding='utf-8', errors='ignore') as fd:
-                        return cls.load(fd)
+                        return cls.load(fd, sentence_tokenizer=sentence_tokenizer)
             except FileNotFoundError as fnfe:
                 raise fnfe
             except UnicodeError:
                 raise Exception("Incorrect encoding detected in {}, please "
                                 "rebuild the dataset".format(f))
 
-        d = cls()
+        d = cls(sentence_tokenizer=sentence_tokenizer)
         lines = f.readlines()
         indices_start_line = d._load_meta(lines)
         for line in lines[indices_start_line:]:
@@ -208,7 +212,7 @@ class Dictionary(object):
         return 0
 
     def save(self, f):
-        """Stores dictionary into a text file"""
+        """Stores dictionary into a text file""" 
         ex_keys, ex_vals = self._get_meta()
         self._save(f, zip(ex_keys + self.symbols[self.nspecial:], ex_vals + self.count[self.nspecial:]))
 
@@ -217,8 +221,37 @@ class Dictionary(object):
         t[-1] = self.eos()
         return t
 
+    def sentence_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
+                    consumer=None, append_eos=True, reverse_order=False):   
+        sentences = sentence_tokenize_line(line)
+        sentence_ids = []
+        for i, sentence in enumerate(sentences):
+            line = sentence
+            words = line_tokenizer(line)
+            if reverse_order:
+                words = list(reversed(words))
+            nwords = len(words)
+            ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+
+            for j, word in enumerate(words):
+                if add_if_not_exist:
+                    idx = self.add_symbol(word)
+                else:
+                    idx = self.index(word)
+                if consumer is not None:
+                    consumer(word, idx)
+                ids[j] = idx
+            if append_eos:
+                ids[nwords] = self.eos_index
+            sentence_ids.append(ids)
+        return sentence_ids
+
     def encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
                     consumer=None, append_eos=True, reverse_order=False):
+        if self.sentence_tokenizer:
+            return self.sentence_encode_line(line, line_tokenizer, add_if_not_exist,
+                    consumer, append_eos, reverse_order)
+
         words = line_tokenizer(line)
         if reverse_order:
             words = list(reversed(words))

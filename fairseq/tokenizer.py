@@ -6,9 +6,14 @@
 # can be found in the PATENTS file in the same directory.
 
 import re
+from nltk.tokenize import sent_tokenize
 
 SPACE_NORMALIZER = re.compile(r"\s+")
 
+def sentence_tokenize_line(line):
+  line = SPACE_NORMALIZER.sub(" ", line)
+  line = line.strip()
+  return sent_tokenize(line)
 
 def tokenize_line(line):
     line = SPACE_NORMALIZER.sub(" ", line)

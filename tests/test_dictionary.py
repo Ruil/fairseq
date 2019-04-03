@@ -67,6 +67,56 @@ class TestDictionary(unittest.TestCase):
             assertMatch(reload_ids, ref_ids2)
             assertMatch(finalized_ids, reload_ids)
 
+    def test_sentence_finalize(self):
+        txt = "All work makes jack boy. All makes jack boy."
+        ref_ids1 = list(map(torch.IntTensor, [
+            [4, 5, 6, 7, 8, 2],
+            [4, 6, 7, 8, 2],
+        ]))
+
+        ref_ids2 = list(map(torch.IntTensor, [
+            [4, 8, 5, 6, 7, 2],
+            [4, 5, 6, 7, 2],
+        ]))
+
+        # build dictionary
+        d = Dictionary(sentence_tokenizer=True)
+        line = txt
+        d.encode_line(line, add_if_not_exist=True)
+        def get_ids(dictionary):
+            ids = []
+            ids.append(dictionary.encode_line(line, add_if_not_exist=False))
+            return ids
+
+        def assertMatch(ids, ref_ids):
+            for toks, ref_toks in zip(ids, ref_ids):
+                print('toks: ', toks)
+                print('ref_toks: ', ref_toks)
+                self.assertEqual(toks.size(), ref_toks.size())
+                self.assertEqual(0, (toks != ref_toks).sum().item())
+
+        ids = get_ids(d)
+        print('ids: ', ids)
+        assertMatch(ids[0], ref_ids1)
+
+        # check finalized dictionary
+        d.finalize()
+        finalized_ids = get_ids(d)
+        print('finalized_ids: ', finalized_ids)
+        print('ref_ids2: ', ref_ids2)
+        assertMatch(finalized_ids[0], ref_ids2)
+        #sys.exit()   
+       
+        # write to disk and reload
+        with tempfile.NamedTemporaryFile(mode='w') as tmp_dict:
+            d.save(tmp_dict.name)
+            d = Dictionary.load(tmp_dict.name, sentence_tokenizer=True)
+            print('+++: ', d.nspecial)
+            print('+++: ', d.sentence_tokenizer)
+            reload_ids = get_ids(d)
+            assertMatch(reload_ids[0], ref_ids2)
+            assertMatch(finalized_ids[0], reload_ids[0])
+
 
 if __name__ == '__main__':
     unittest.main()

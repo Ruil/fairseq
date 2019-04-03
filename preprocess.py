@@ -31,7 +31,8 @@ def main(args):
     target = not args.only_source
 
     task = tasks.get_task(args.task)
-
+    print('task: ', args.task)
+    
     def train_path(lang):
         return "{}{}".format(args.trainpref, ("." + lang) if lang else "")
 
@@ -97,6 +98,9 @@ def main(args):
         tgt_dict.save(dict_path(args.target_lang))
 
     def make_binary_dataset(vocab, input_prefix, output_prefix, lang, num_workers):
+        print('input_prefix: ', input_prefix)
+        print('output_prefix: ', output_prefix)
+        print('worker: ', num_workers)
         print("| [{}] Dictionary: {} types".format(lang, len(vocab) - 1))
         n_seq_tok = [0, 0]
         replaced = Counter()
@@ -109,7 +113,10 @@ def main(args):
         input_file = "{}{}".format(
             input_prefix, ("." + lang) if lang is not None else ""
         )
+        print('input_file: ', input_file)
         offsets = Binarizer.find_offsets(input_file, num_workers)
+        print('offsets: ', offsets)
+        #sys.exit()
         pool = None
         if num_workers > 1:
             pool = Pool(processes=num_workers - 1)
@@ -129,7 +136,9 @@ def main(args):
                     callback=merge_result
                 )
             pool.close()
-
+        
+        print('ds: ', dataset_dest_file(args, output_prefix, lang, "bin"))
+        #sys.exit()
         ds = indexed_dataset.IndexedDatasetBuilder(
             dataset_dest_file(args, output_prefix, lang, "bin")
         )
@@ -139,6 +148,7 @@ def main(args):
                 offset=0, end=offsets[1]
             )
         )
+        #sys.exit()
         if num_workers > 1:
             pool.join()
             for worker_id in range(1, num_workers):
@@ -160,6 +170,7 @@ def main(args):
                 vocab.unk_word,
             )
         )
+        sys.exit()
 
     def make_dataset(vocab, input_prefix, output_prefix, lang, num_workers=1):
         if args.output_format == "binary":
@@ -190,6 +201,7 @@ def main(args):
 
     print("| Wrote preprocessed data to {}".format(args.destdir))
 
+    #print('alignfile: ', args.alignfile)
     if args.alignfile:
         assert args.trainpref, "--trainpref must be set if --alignfile is specified"
         src_file_name = train_path(args.source_lang)
@@ -234,6 +246,8 @@ def main(args):
 
 
 def binarize(args, filename, vocab, output_prefix, lang, offset, end, append_eos=True):
+    #print('ds: ', dataset_dest_file(args, output_prefix, lang, "bin"))
+    #sys.exit()
     ds = indexed_dataset.IndexedDatasetBuilder(
         dataset_dest_file(args, output_prefix, lang, "bin")
     )
