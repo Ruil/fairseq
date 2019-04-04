@@ -7,6 +7,7 @@
 
 import tempfile
 import unittest
+import numpy as np
 
 import torch
 
@@ -43,7 +44,10 @@ class TestDictionary(unittest.TestCase):
         def get_ids(dictionary):
             ids = []
             for line in txt:
+                tmp_ids = dictionary.encode_line(line, add_if_not_exist=False)
                 ids.append(dictionary.encode_line(line, add_if_not_exist=False))
+                #print('test: ', np.array(tmp_ids.numpy() + 1))
+                #sys.exit()
             return ids
 
         def assertMatch(ids, ref_ids):
@@ -65,6 +69,7 @@ class TestDictionary(unittest.TestCase):
             d = Dictionary.load(tmp_dict.name)
             reload_ids = get_ids(d)
             print('reload_ids: ', reload_ids)
+            print(d.symbols)
             print('+++: ', d.sentence_tokenizer)
             #sys.exit()
             assertMatch(reload_ids, ref_ids2)

@@ -49,6 +49,8 @@ def main(args):
         return dest_path("dict", lang) + ".txt"
 
     def build_dictionary(filenames, src=False, tgt=False):
+        print('sentence-tokenizer: ', args.sentence_tokenizer)
+        #sys.exit()
         assert src ^ tgt
         return task.build_dictionary(
             filenames,
@@ -56,6 +58,7 @@ def main(args):
             threshold=args.thresholdsrc if src else args.thresholdtgt,
             nwords=args.nwordssrc if src else args.nwordstgt,
             padding_factor=args.padding_factor,
+            sentence_tokenizer=args.sentence_tokenizer
         )
 
     if not args.srcdict and os.path.exists(dict_path(args.source_lang)):
