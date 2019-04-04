@@ -31,8 +31,8 @@ class Dictionary(object):
         self.unk_index = self.add_symbol(unk)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
-        #self.meta_keys = ['sentence_tokenizer']
-        #self.meta_vals = [sentence_tokenizer]
+        self.meta_keys = ['sentence_tokenizer']
+        self.meta_vals = [self.sentence_tokenizer]
 
     def __eq__(self, other):
         return self.indices == other.indices
@@ -160,7 +160,7 @@ class Dictionary(object):
         return self.unk_index
 
     @classmethod
-    def load(cls, f, sentence_tokenizer=False, ignore_utf_errors=False):
+    def load(cls, f, ignore_utf_errors=False):
         """Loads the dictionary from a text file with the format:
 
         ```
@@ -173,17 +173,17 @@ class Dictionary(object):
             try:
                 if not ignore_utf_errors:
                     with open(f, 'r', encoding='utf-8') as fd:
-                        return cls.load(fd, sentence_tokenizer=sentence_tokenizer)
+                        return cls.load(fd)
                 else:
                     with open(f, 'r', encoding='utf-8', errors='ignore') as fd:
-                        return cls.load(fd, sentence_tokenizer=sentence_tokenizer)
+                        return cls.load(fd)
             except FileNotFoundError as fnfe:
                 raise fnfe
             except UnicodeError:
                 raise Exception("Incorrect encoding detected in {}, please "
                                 "rebuild the dataset".format(f))
 
-        d = cls(sentence_tokenizer=sentence_tokenizer)
+        d = cls()
         lines = f.readlines()
         indices_start_line = d._load_meta(lines)
         for line in lines[indices_start_line:]:
@@ -206,9 +206,17 @@ class Dictionary(object):
             print('{} {}'.format(k, v), file=f)
 
     def _get_meta(self):
-        return [], []
+        return self.meta_keys, self.meta_vals
 
     def _load_meta(self, lines):
+        idx = lines[0].rfind(' ')
+        if lines[0][:idx] == 'sentence_tokenizer':
+            #print('load: ', lines[0][idx + 1:])
+            #sys.exit()
+            
+            self.sentence_tokenizer = (lines[0][idx + 1:].strip() == 'True')
+            #print(self.sentence_tokenizer)
+            return len(self.meta_keys)
         return 0
 
     def save(self, f):

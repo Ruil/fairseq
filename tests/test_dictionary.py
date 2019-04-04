@@ -64,6 +64,9 @@ class TestDictionary(unittest.TestCase):
             d.save(tmp_dict.name)
             d = Dictionary.load(tmp_dict.name)
             reload_ids = get_ids(d)
+            print('reload_ids: ', reload_ids)
+            print('+++: ', d.sentence_tokenizer)
+            #sys.exit()
             assertMatch(reload_ids, ref_ids2)
             assertMatch(finalized_ids, reload_ids)
 
@@ -110,7 +113,7 @@ class TestDictionary(unittest.TestCase):
         # write to disk and reload
         with tempfile.NamedTemporaryFile(mode='w') as tmp_dict:
             d.save(tmp_dict.name)
-            d = Dictionary.load(tmp_dict.name, sentence_tokenizer=True)
+            d = Dictionary.load(tmp_dict.name)
             print('+++: ', d.nspecial)
             print('+++: ', d.sentence_tokenizer)
             reload_ids = get_ids(d)
