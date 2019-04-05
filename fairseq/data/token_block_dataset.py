@@ -56,6 +56,7 @@ class TokenBlockDataset(FairseqDataset):
                 return (start, end)
 
             self.slice_indices = [block_at(i) for i in range(length)]
+            print('self.slice_indices: ', self.slice_indices)
             print('len indices: ', len(self.slice_indices))
             #sys.exit()
         elif break_mode == 'complete':
@@ -82,6 +83,8 @@ class TokenBlockDataset(FairseqDataset):
             raise ValueError('Invalid break_mode: ' + break_mode)
 
         self.sizes = np.array([e - s for s, e in self.slice_indices])
+        print('self.sizes: ', self.sizes)
+        sys.exit()
         self.slice_indices = np.array(self.slice_indices, dtype=int)
 
         # build index mapping block indices to the underlying dataset indices
@@ -104,6 +107,10 @@ class TokenBlockDataset(FairseqDataset):
                 start_offset,  # starting offset within starting index
                 ds_idx,  # ending index in dataset
             )
+            print('start_ds_idx: ', start_ds_idx)
+            print('start_offset', start_offset)
+            print('ds_idx', ds_idx)
+            sys.exit()
         print('len self.slice_indices: ', len(self.slice_indices))
         #print('map: ', self.block_to_dataset_index)
         #sys.exit()

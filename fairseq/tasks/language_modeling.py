@@ -21,6 +21,7 @@ from fairseq.data import (
     TokenBlockDataset,
     TransformEosDataset,
     TruncatedDictionary,
+    SentenceBlockDataset,
 )
 
 from . import FairseqTask, register_task
@@ -81,6 +82,9 @@ class LanguageModelingTask(FairseqTask):
                             help='include future target')
         parser.add_argument('--past-target', action='store_true',
                             help='include past target')
+        parser.add_argument('--sentence', default=False, action='store_true',
+                            help='')
+
         # fmt: on
 
     def __init__(self, args, dictionary, output_dictionary, targets=None):
@@ -91,6 +95,8 @@ class LanguageModelingTask(FairseqTask):
         if targets is None:
             targets = ['future']
         self.targets = targets
+        self.sentence = args.sentence
+        print('self.sentence: ', self.sentence)
 
     @classmethod
     def setup_task(cls, args, **kwargs):
@@ -163,12 +169,16 @@ class LanguageModelingTask(FairseqTask):
                 else:
                     raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
             print('mode: ', self.args.sample_break_mode)
+            print('sizes: ', ds.sizes)
             #sys.exit()
+
             loaded_datasets.append(
                 TokenBlockDataset(
                     ds, ds.sizes, self.args.tokens_per_sample,
                     pad=self.dictionary.pad(), eos=self.dictionary.eos(),
                     break_mode=self.args.sample_break_mode, include_targets=True,
+                ) if not self.sentence else SentenceBlockDataset(
+                    ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
                 )
             )
 

@@ -58,6 +58,8 @@ class IndexedDataset(torch.utils.data.Dataset):
         self.path = path
 
     def read_index(self, path):
+        print('read_index')
+        #sys.exit()
         with open(index_file_path(path), 'rb') as f:
             magic = f.read(8)
             assert magic == b'TNTIDX\x00\x00'
