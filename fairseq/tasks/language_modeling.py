@@ -146,13 +146,16 @@ class LanguageModelingTask(FairseqTask):
         for k in itertools.count():
             split_k = split + (str(k) if k > 0 else '')
             path = os.path.join(self.args.data, split_k)
-            #print('path: ', path)
+            print('path: ', path)
             if self.args.raw_text and IndexedRawTextDataset.exists(path):
+                print('load IndexedRawTextDataset')
                 ds = IndexedRawTextDataset(path, self.dictionary)
             elif not self.args.raw_text and IndexedDataset.exists(path):
                 if self.args.lazy_load:
+                    print('load IndexedDataset')
                     ds = IndexedDataset(path, fix_lua_indexing=True)
                 else:
+                    print('load IndexedCacheDataset')
                     ds = IndexedCachedDataset(path, fix_lua_indexing=True)
             else:
                 if k > 0:

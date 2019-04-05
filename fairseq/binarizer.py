@@ -48,8 +48,14 @@ class Binarizer:
                         append_eos=append_eos,
                         reverse_order=reverse_order,
                 )
+                #print('line: ', line)
+                #print('ids: ', ids)
                 nseq += 1
-                ntok += len(ids)
+                if isinstance(ids, list):
+                    ntok += sum([len(item) for item in ids])
+                else:
+                    ntok += len(ids)
+                #print('ntok: ', ntok)
                 consumer(ids)
                 line = f.readline()
         return {'nseq': nseq, 'nunk': sum(replaced.values()), 'ntok': ntok, 'replaced': replaced}

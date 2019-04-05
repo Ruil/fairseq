@@ -173,7 +173,6 @@ def main(args):
                 vocab.unk_word,
             )
         )
-        sys.exit()
 
     def make_dataset(vocab, input_prefix, output_prefix, lang, num_workers=1):
         if args.output_format == "binary":

@@ -86,6 +86,22 @@ class IndexedDataset(torch.utils.data.Dataset):
             self.read_data(self.path)
         self.check_index(i)
         tensor_size = int(self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]])
+        print('tensor_size: ', tensor_size)
+        sys.exit()
+        a = np.empty(tensor_size, dtype=self.dtype)
+        self.data_file.seek(self.data_offsets[i] * self.element_size)
+        self.data_file.readinto(a)
+        item = torch.from_numpy(a).long()
+        if self.fix_lua_indexing:
+            item -= 1  # subtract 1 for 0-based indexing
+        return item
+
+    def get_sentence_item(self, i):
+        if not self.data_file:
+            self.read_data(self.path)
+        self.check_index(i)
+        tensor_size = int(self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]])
+        print('tensor_size: ', tensor_size)
         a = np.empty(tensor_size, dtype=self.dtype)
         self.data_file.seek(self.data_offsets[i] * self.element_size)
         self.data_file.readinto(a)
@@ -121,6 +137,9 @@ class IndexedCachedDataset(IndexedDataset):
         return True
 
     def prefetch(self, indices):
+        print('prefetch')
+        #print('indices: ', indices)
+        #sys.exit()
         if all(i in self.cache_index for i in indices):
             return
         if not self.data_file:
@@ -143,12 +162,17 @@ class IndexedCachedDataset(IndexedDataset):
     def __getitem__(self, i):
         self.check_index(i)
         tensor_size = self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]]
+        print('dim: ', self.dim_offsets)
+        print('tensor_size: ', tensor_size)
+        print('i: ', i)
         a = np.empty(tensor_size, dtype=self.dtype)
         ptx = self.cache_index[i]
         np.copyto(a, self.cache[ptx : ptx + a.size])
         item = torch.from_numpy(a).long()
         if self.fix_lua_indexing:
             item -= 1  # subtract 1 for 0-based indexing
+        print('item: ', item)
+        sys.exit()
         return item
 
 
@@ -221,14 +245,29 @@ class IndexedDatasetBuilder(object):
 
     def add_item(self, tensor):
         # +1 for Lua compatibility
+        #print('tensor: ', tensor)
         if isinstance(tensor, list):
-            bytes = self.out_file.write([np.array(item.numpy() + 1, dtype=self.dtype) for item in tensor])
+            return self.add_sentence_item(tensor)
         else:
-            bytes = self.out_file.write(np.array(tensor.numpy() + 1, dtype=self.dtype))
-        self.data_offsets.append(self.data_offsets[-1] + bytes / self.element_size)
-        for s in tensor.size():
-            self.sizes.append(s)
-        self.dim_offsets.append(self.dim_offsets[-1] + len(tensor.size()))
+            #print('tensor size: ', tensor.size())
+            bytes_size = self.out_file.write(np.array(tensor.numpy() + 1, dtype=self.dtype))
+            self.data_offsets.append(self.data_offsets[-1] + bytes_size / self.element_size)
+            for s in tensor.size():
+                self.sizes.append(s)
+            #print('dim start: ', self.dim_offsets)
+            self.dim_offsets.append(self.dim_offsets[-1] + len(tensor.size()))
+            #print('dim end: ', self.dim_offsets)
+
+    def add_sentence_item(self, tensor):
+        # +1 for Lua compatibility
+        for item in tensor:
+            bytes_size = self.out_file.write(np.array(item.numpy() + 1, dtype=self.dtype))
+            self.data_offsets.append(self.data_offsets[-1] + bytes_size / self.element_size)
+            for s in item.size():
+                self.sizes.append(s)
+                #print(s)
+        #sys.exit()
+        self.dim_offsets.append(self.dim_offsets[-1] + len(tensor))
 
     def merge_file_(self, another_file):
         index = IndexedDataset(another_file)

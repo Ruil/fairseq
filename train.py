@@ -139,7 +139,7 @@ def train(args, trainer, task, epoch_itr):
     max_update = args.max_update or math.inf
     for i, samples in enumerate(progress, start=epoch_itr.iterations_in_epoch):
         print('samples: ', samples)
-        sys.exit()
+        #sys.exit()
         log_output = trainer.train_step(samples)
         if log_output is None:
             continue
