@@ -145,10 +145,12 @@ def main(args):
         ds = indexed_dataset.IndexedDatasetBuilder(
             dataset_dest_file(args, output_prefix, lang, "bin")
         )
+        print('sentence_tokenizer: ', args.sentence_tokenizer)
+        #sys.exit()
         merge_result(
             Binarizer.binarize(
                 input_file, vocab, lambda t: ds.add_item(t),
-                offset=0, end=offsets[1]
+                offset=0, end=offsets[1], sentence_tokenizer=args.sentence_tokenizer
             )
         )
         #sys.exit()

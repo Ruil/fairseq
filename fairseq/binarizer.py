@@ -25,7 +25,7 @@ class Binarizer:
 
     @staticmethod
     def binarize(filename, dict, consumer, tokenize=tokenize_line, append_eos=True, reverse_order=False,
-                 offset=0, end=-1):
+                 offset=0, end=-1, sentence_tokenizer=False):
         nseq, ntok = 0, 0
         replaced = Counter()
 
@@ -40,6 +40,9 @@ class Binarizer:
             while line:
                 if end > 0 and f.tell() > end:
                     break
+                if sentence_tokenizer and line.strip() == '':
+                    line = f.readline()
+                    continue
                 ids = dict.encode_line(
                         line=line,
                         line_tokenizer=tokenize,

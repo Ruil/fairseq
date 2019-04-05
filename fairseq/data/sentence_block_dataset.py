@@ -29,6 +29,7 @@ class SentenceBlockDataset(FairseqDataset):
         assert len(dataset) == len(sizes)
 
         sizes = np.array(sizes, dtype=int)
+        dim_offsets = np.array(dim_offsets, dtype=int)
         total_size = sum(sizes)
         length = total_size
 
@@ -37,24 +38,35 @@ class SentenceBlockDataset(FairseqDataset):
         ds_idx, ds_remaining = -1, 0
         print('dim_offsets: ', dim_offsets)
         print('len dim_offsets: ', len(dim_offsets))
+        print('length: ', length)
+        print('shape: ', self.block_to_dataset_index.shape)       
         start_ds_idx = 0
-        i = 0
-        for size in dim_offsets:
+        block_idx = 0
+        prev = 0
+        for idx in range(len(dim_offsets) - 1):
+            #print('idx: ', idx)
+            #print('idx max: ', len(dim_offsets))
+            #print('block_idx: ', block_idx)
+            size = dim_offsets[idx+1] - dim_offsets[idx]
             if size == 0:
-                print('fix preprocess issue')
-                sys.exit()
-                continue
+                print('TODO: fix preprocess issue, e.g., encode empty line with <newline>')
+                #sys.exit()
+                #continue
+            #print('cur size: ', size)
             ds_idx = start_ds_idx + size - 1
             for start_offset in range(size):
-                self.block_to_dataset_index[i] = (
+                self.block_to_dataset_index[block_idx] = (
                     start_ds_idx,  # starting index in dataset
                     start_offset,  # starting offset within starting index
                     ds_idx,  # ending index in dataset
                 )
-                i += 1
+                block_idx += 1
+                #print('block_idx: ', block_idx)
+                #print('rate: ', float())
+            #sys.exit()
             start_ds_idx = ds_idx + 1
-
-        assert ds_idx == length - 1
+        print('block_idx: ', block_idx) 
+        assert block_idx == length - 1
 
     def __getitem__(self, index):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]

@@ -68,9 +68,17 @@ class IndexedDataset(torch.utils.data.Dataset):
             code, self.element_size = struct.unpack('<QQ', f.read(16))
             self.dtype = dtypes[code]
             self.size, self.s = struct.unpack('<QQ', f.read(16))
-            self.dim_offsets = read_longs(f, self.size + 1)
+            dim_size, = struct.unpack('<Q', f.read(8))
+            self.dim_offsets = read_longs(f, dim_size + 1)
             self.data_offsets = read_longs(f, self.size + 1)
             self.sizes = read_longs(f, self.s)
+            print('len sizes: ', len(self.sizes))
+            print('dim last: ', self.dim_offsets[-1])
+            print('dim len: ', len(self.dim_offsets))
+            print('dim: ', self.dim_offsets) 
+            print('len self.data_offsets: ', len(self.data_offsets))
+            print('len self.sizes: ', len(self.sizes))
+            sys.exit()
 
     def read_data(self, path):
         self.data_file = open(data_file_path(path), 'rb', buffering=0)
@@ -90,20 +98,6 @@ class IndexedDataset(torch.utils.data.Dataset):
         tensor_size = int(self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]])
         print('tensor_size: ', tensor_size)
         sys.exit()
-        a = np.empty(tensor_size, dtype=self.dtype)
-        self.data_file.seek(self.data_offsets[i] * self.element_size)
-        self.data_file.readinto(a)
-        item = torch.from_numpy(a).long()
-        if self.fix_lua_indexing:
-            item -= 1  # subtract 1 for 0-based indexing
-        return item
-
-    def get_sentence_item(self, i):
-        if not self.data_file:
-            self.read_data(self.path)
-        self.check_index(i)
-        tensor_size = int(self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]])
-        print('tensor_size: ', tensor_size)
         a = np.empty(tensor_size, dtype=self.dtype)
         self.data_file.seek(self.data_offsets[i] * self.element_size)
         self.data_file.readinto(a)
@@ -259,6 +253,7 @@ class IndexedDatasetBuilder(object):
             #print('dim start: ', self.dim_offsets)
             self.dim_offsets.append(self.dim_offsets[-1] + len(tensor.size()))
             #print('dim end: ', self.dim_offsets)
+            assert len(self.sizes) == self.dim_offsets[-1]
 
     def add_sentence_item(self, tensor):
         # +1 for Lua compatibility
@@ -269,7 +264,10 @@ class IndexedDatasetBuilder(object):
                 self.sizes.append(s)
                 #print(s)
         #sys.exit()
-        self.dim_offsets.append(self.dim_offsets[-1] + len(tensor))
+        self.dim_offsets.append(self.dim_offsets[-1] + sum([len(item.size()) for item in tensor]))
+        #print('self.dim_offsets: ', self.dim_offsets)
+        #print('self.sizes: ', self.sizes)
+        assert len(self.sizes) == self.dim_offsets[-1]
 
     def merge_file_(self, another_file):
         index = IndexedDataset(another_file)
@@ -298,7 +296,12 @@ class IndexedDatasetBuilder(object):
         index.write(struct.pack('<Q', 1))
         index.write(struct.pack('<QQ', code(self.dtype), self.element_size))
         index.write(struct.pack('<QQ', len(self.data_offsets) - 1, len(self.sizes)))
+        index.write(struct.pack('<Q', len(self.dim_offsets) - 1))
         write_longs(index, self.dim_offsets)
+        print('dim len: ', len(self.dim_offsets))
+        print('finalize: ', self.dim_offsets)
+        print('len self.data_offsets: ', len(self.data_offsets))
+        print('len self.sizes: ', len(self.sizes))
         write_longs(index, self.data_offsets)
         write_longs(index, self.sizes)
         index.close()

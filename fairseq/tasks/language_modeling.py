@@ -169,9 +169,12 @@ class LanguageModelingTask(FairseqTask):
                 else:
                     raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
             print('mode: ', self.args.sample_break_mode)
-            print('sizes: ', ds.sizes)
-            #sys.exit()
-
+            print('sizes: ', len(ds.sizes))
+            print('dim_offsets last: ', ds.dim_offsets[-1] )
+            assert len(ds.sizes) == ds.dim_offsets[-1]
+            sys.exit()
+            
+            
             loaded_datasets.append(
                 TokenBlockDataset(
                     ds, ds.sizes, self.args.tokens_per_sample,

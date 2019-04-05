@@ -234,6 +234,8 @@ class Dictionary(object):
         sentences = sentence_tokenize_line(line)
         sentence_ids = []
         for i, sentence in enumerate(sentences):
+            if sentence.strip() == '':
+                continue
             line = sentence
             words = line_tokenizer(line)
             if reverse_order:
