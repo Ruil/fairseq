@@ -97,6 +97,8 @@ class IndexedDataset(torch.utils.data.Dataset):
         self.check_index(i)
         tensor_size = int(self.sizes[self.dim_offsets[i]:self.dim_offsets[i + 1]])
         print('tensor_size: ', tensor_size)
+        print('self.dim_offsets at i: ', self.dim_offsets[i])
+        print('self.dim_offsets at i + 1: ', self.dim_offsets[i + 1])
         sys.exit()
         a = np.empty(tensor_size, dtype=self.dtype)
         self.data_file.seek(self.data_offsets[i] * self.element_size)
@@ -161,6 +163,9 @@ class IndexedCachedDataset(IndexedDataset):
         print('dim: ', self.dim_offsets)
         print('tensor_size: ', tensor_size)
         print('i: ', i)
+        print('self.dim_offsets at i: ', self.dim_offsets[i])
+        print('self.dim_offsets at i + 1: ', self.dim_offsets[i + 1])
+        
         a = np.empty(tensor_size, dtype=self.dtype)
         ptx = self.cache_index[i]
         np.copyto(a, self.cache[ptx : ptx + a.size])
@@ -170,6 +175,29 @@ class IndexedCachedDataset(IndexedDataset):
         print('item: ', item)
         sys.exit()
         return item
+
+
+class IndexedCachedSentenceDataset(IndexedCachedDataset):
+
+    def __init__(self, path, fix_lua_indexing=False):
+        super().__init__(path, fix_lua_indexing=fix_lua_indexing)
+
+    def __getitem__(self, i):
+        self.check_index(i)
+        tensor_size = self.sizes[i]
+        print('tensor_size: ', tensor_size)
+        print('i: ', i)
+
+        a = np.empty(tensor_size, dtype=self.dtype)
+        ptx = self.cache_index[i]
+        np.copyto(a, self.cache[ptx : ptx + a.size])
+        item = torch.from_numpy(a).long()
+        if self.fix_lua_indexing:
+            item -= 1  # subtract 1 for 0-based indexing
+        print('item: ', item)
+        #sys.exit()
+        return item
+
 
 
 class IndexedRawTextDataset(torch.utils.data.Dataset):

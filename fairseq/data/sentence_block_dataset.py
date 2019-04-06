@@ -31,7 +31,8 @@ class SentenceBlockDataset(FairseqDataset):
         sizes = np.array(sizes, dtype=int)
         dim_offsets = np.array(dim_offsets, dtype=int)
         total_size = sum(sizes)
-        length = total_size
+        length = len(sizes)
+        self.length = length
 
         # build index mapping block indices to the underlying dataset indices
         self.block_to_dataset_index = np.empty((length, 3), dtype=int)
@@ -41,7 +42,10 @@ class SentenceBlockDataset(FairseqDataset):
         print('dim_offsets: ', dim_offsets)
         print('len dim_offsets: ', len(dim_offsets))
         print('length: ', length)
-        print('shape: ', self.block_to_dataset_index.shape)       
+        print('shape: ', self.block_to_dataset_index.shape)     
+        print('total_size: ', total_size)  
+        self.sizes = np.arange(length, dtype=int)
+
         start_ds_idx = 0
         block_idx = 0
         prev = 0
@@ -62,44 +66,57 @@ class SentenceBlockDataset(FairseqDataset):
                     start_offset,  # starting offset within starting index
                     ds_idx,  # ending index in dataset
                 )
+                self.sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
+                #print('sizes at idx: ', self.sizes[block_idx])
                 block_idx += 1
-                #print('block_idx: ', block_idx)
-                #print('rate: ', float())
+                #print('start_ds_idx: ', start_ds_idx)
+                #print('ds_idx: ', ds_idx)
             #sys.exit()
             start_ds_idx = ds_idx + 1
         print('block_idx: ', block_idx) 
         print('length: ', length)
+        print('self.sizes: ', self.sizes)
         assert dim_offsets[-1] == len(sizes) 
+        assert length == block_idx
+        #sys.exit() 
 
     def __getitem__(self, index):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]
-        buffer = torch.cat([
+        target_idx = start_ds_idx + start_offset
+        before = torch.cat([
+            self.dataset[idx] for idx in range(start_ds_idx, start_ds_idx + 1)
+        ])
+        target = self.dataset[target_idx]
+        after = torch.cat([
+            self.dataset[idx] for idx in range(start_ds_idx + 1, end_ds_idx + 1)
+        ])
+        item = torch.cat([
+            before, target, after
+        ])
+        test = torch.cat([
             self.dataset[idx] for idx in range(start_ds_idx, end_ds_idx + 1)
         ])
-        slice_s, slice_e = self.slice_indices[index]
-        length = slice_e - slice_s
-        s, e = start_offset, start_offset + length
-        item = buffer[s:e]
+        print('item', item)
+        print('test: ', test)
+        sys.exit()
 
-        if self.include_targets:
-            # *target* is the original sentence (=item)
-            # *source* is rotated left by 1 (maybe left-padded with eos)
-            # *past_target* is rotated left by 2 (left-padded as needed)
-            if s == 0:
-                source = torch.cat([item.new([self.eos]), buffer[0:e - 1]])
-                past_target = torch.cat([item.new([self.pad, self.eos]), buffer[0:e - 2]])
+        # *target* is the original sentences target + context (=item)
+        # *source* is sentences without the target sentence, and with the target position delimiter
+        # *past_target* is the target sentence, target only
+        if s == 0:
+            source = torch.cat([item.new([self.eos]), buffer[0:e - 1]])
+            past_target = torch.cat([item.new([self.pad, self.eos]), buffer[0:e - 2]])
+        else:
+            source = buffer[s - 1:e - 1]
+            if s == 1:
+                past_target = torch.cat([item.new([self.eos]), buffer[0:e - 2]])
             else:
-                source = buffer[s - 1:e - 1]
-                if s == 1:
-                    past_target = torch.cat([item.new([self.eos]), buffer[0:e - 2]])
-                else:
-                    past_target = buffer[s - 2:e - 2]
+                past_target = buffer[s - 2:e - 2]
 
-            return source, item, past_target
-        return item
+        return source, item, past_target
 
     def __len__(self):
-        return len(self.slice_indices)
+        return self.length
 
     @property
     def supports_prefetch(self):

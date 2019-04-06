@@ -14,6 +14,7 @@ import numpy as np
 from fairseq.data import (
     ConcatDataset,
     Dictionary,
+    IndexedCachedSentenceDataset,
     IndexedCachedDataset,
     IndexedDataset,
     IndexedRawTextDataset,
@@ -160,6 +161,9 @@ class LanguageModelingTask(FairseqTask):
                 if self.args.lazy_load:
                     print('load IndexedDataset')
                     ds = IndexedDataset(path, fix_lua_indexing=True)
+                elif self.sentence:
+                    print('load IndexedCacheSentenceDataset')
+                    ds = IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
                 else:
                     print('load IndexedCacheDataset')
                     ds = IndexedCachedDataset(path, fix_lua_indexing=True)

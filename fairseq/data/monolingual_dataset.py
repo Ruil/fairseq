@@ -95,7 +95,7 @@ class MonolingualDataset(FairseqDataset):
     def _make_source_target(self, source, future_target, past_target):
         if self.targets is not None:
             target = []
-
+       
             if self.add_eos_for_other_targets and (('self' in self.targets) or ('past' in self.targets)) \
                     and source[-1] != self.vocab.eos():
                 # append eos at the end of source
@@ -107,7 +107,8 @@ class MonolingualDataset(FairseqDataset):
                     # first token is before the start of sentence which is only used in "none" break mode when
                     # add_eos_for_other_targets is False
                     past_target = torch.cat([past_target.new([self.vocab.pad()]), past_target[1:], source[-2, None]])
-
+            
+            print('self.targets: ', self.targets)
             for t in self.targets:
                 if t == 'self':
                     target.append(source)
