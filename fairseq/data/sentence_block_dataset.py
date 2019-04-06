@@ -36,6 +36,8 @@ class SentenceBlockDataset(FairseqDataset):
         # build index mapping block indices to the underlying dataset indices
         self.block_to_dataset_index = np.empty((length, 3), dtype=int)
         ds_idx, ds_remaining = -1, 0
+        print('sizes: ', sizes)
+        print('len sizes: ', len(sizes))
         print('dim_offsets: ', dim_offsets)
         print('len dim_offsets: ', len(dim_offsets))
         print('length: ', length)
@@ -66,7 +68,8 @@ class SentenceBlockDataset(FairseqDataset):
             #sys.exit()
             start_ds_idx = ds_idx + 1
         print('block_idx: ', block_idx) 
-        assert block_idx == length - 1
+        print('length: ', length)
+        assert dim_offsets[-1] == len(sizes) 
 
     def __getitem__(self, index):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]

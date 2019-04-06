@@ -172,7 +172,7 @@ class LanguageModelingTask(FairseqTask):
             print('sizes: ', len(ds.sizes))
             print('dim_offsets last: ', ds.dim_offsets[-1] )
             assert len(ds.sizes) == ds.dim_offsets[-1]
-            sys.exit()
+            #sys.exit()
             
             
             loaded_datasets.append(
