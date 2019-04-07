@@ -186,6 +186,7 @@ class LanguageModelingTask(FairseqTask):
                     break_mode=self.args.sample_break_mode, include_targets=True,
                 ) if not self.sentence else SentenceBlockDataset(
                     ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
+                    mask=self.dictionary.mask(),
                 )
             )
 

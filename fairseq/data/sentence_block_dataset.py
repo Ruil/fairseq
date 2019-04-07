@@ -20,11 +20,12 @@ class SentenceBlockDataset(FairseqDataset):
         sizes (List[int]): sentence lengths (required for 'complete' and 'eos')
     """
 
-    def __init__(self, dataset, sizes, dim_offsets, pad, eos):
+    def __init__(self, dataset, sizes, dim_offsets, pad, eos, mask):
         super().__init__()
         self.dataset = dataset
         self.pad = pad
         self.eos = eos
+        self.mask = mask
 
         assert len(dataset) == len(sizes)
 
@@ -93,27 +94,14 @@ class SentenceBlockDataset(FairseqDataset):
         item = torch.cat([
             before, target, after
         ])
-        test = torch.cat([
-            self.dataset[idx] for idx in range(start_ds_idx, end_ds_idx + 1)
-        ])
-        print('item', item)
-        print('test: ', test)
-        sys.exit()
-
-        # *target* is the original sentences target + context (=item)
+        source = torch.cat([
+            before, item.new([self.mask]), after
+        ])      
+        target = torch.cat([target])
+        # *item* is the original sentences target + context (=item)
         # *source* is sentences without the target sentence, and with the target position delimiter
-        # *past_target* is the target sentence, target only
-        if s == 0:
-            source = torch.cat([item.new([self.eos]), buffer[0:e - 1]])
-            past_target = torch.cat([item.new([self.pad, self.eos]), buffer[0:e - 2]])
-        else:
-            source = buffer[s - 1:e - 1]
-            if s == 1:
-                past_target = torch.cat([item.new([self.eos]), buffer[0:e - 2]])
-            else:
-                past_target = buffer[s - 2:e - 2]
-
-        return source, item, past_target
+        # *target* is the target sentence, target only
+        return source, item, target
 
     def __len__(self):
         return self.length

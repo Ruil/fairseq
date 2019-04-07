@@ -19,8 +19,8 @@ from fairseq.data import data_utils
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', sentence_tokenizer=False):
-        self.unk_word, self.pad_word, self.eos_word = unk, pad, eos
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', sentence_tokenizer=False):
+        self.unk_word, self.pad_word, self.eos_word, self.mask_word = unk, pad, eos, mask
         self.symbols = []
         self.count = []
         self.indices = {}
@@ -29,6 +29,7 @@ class Dictionary(object):
         self.pad_index = self.add_symbol(pad)
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
+        self.mask_index = self.add_symbol(mask)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
         self.meta_keys = ['sentence_tokenizer']
@@ -158,6 +159,9 @@ class Dictionary(object):
     def unk(self):
         """Helper to get index of unk symbol"""
         return self.unk_index
+
+    def mask(self):
+        return self.mask_index
 
     @classmethod
     def load(cls, f, ignore_utf_errors=False):
