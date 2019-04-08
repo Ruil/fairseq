@@ -17,6 +17,7 @@ from .round_robin_zip_datasets import RoundRobinZipDatasets
 from .token_block_dataset import TokenBlockDataset
 from .transform_eos_dataset import TransformEosDataset
 from .sentence_block_dataset import SentenceBlockDataset
+from .monolingual_pair_dataset import MonoLingualPairDataset
 
 from .iterators import (
     CountingIterator,
@@ -45,4 +46,5 @@ __all__ = [
     'TokenBlockDataset',
     'TransformEosDataset',
     'SentenceBlockDataset',
+    'MonoLingualPairDataset',
 ]

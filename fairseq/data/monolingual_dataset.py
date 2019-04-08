@@ -62,14 +62,18 @@ class MonolingualDataset(FairseqDataset):
     """
 
     def __init__(self, dataset, sizes, src_vocab, tgt_vocab, add_eos_for_other_targets, shuffle,
-                 targets=None):
+                 targets=None, max_source_positions=1024, max_target_positions=1024):
         self.dataset = dataset
         self.sizes = np.array(sizes)
         self.vocab = src_vocab
         self.tgt_vocab = tgt_vocab
         self.add_eos_for_other_targets = add_eos_for_other_targets
         self.shuffle = shuffle
-
+        self.max_source_positions = max_source_positions
+        self.max_target_positions = max_target_positions
+           
+        print(targets)
+        sys.exit()
         assert targets is None or all(t in {'self', 'future', 'past'} for t in targets), \
             "targets must be none or one of 'self', 'future', 'past'"
         if targets is not None and len(targets) == 0:
@@ -83,9 +87,9 @@ class MonolingualDataset(FairseqDataset):
         else:
             source = self.dataset[index]
             target = None
-        print('id: ', index)
-        print('source: ', source)
-        print('target: ', target)
+        #print('id: ', index)
+        #print('source: ', source)
+        #print('target: ', target)
         #sys.exit()
         return {'id': index, 'source': source, 'target': target}
 
@@ -124,9 +128,9 @@ class MonolingualDataset(FairseqDataset):
         else:
             target = future_target
         
-        print('target 0: ', target)
-        print('source: ', source)
-        print('target: ', self._filter_vocab(target))
+        #print('target 0: ', target)
+        #print('source: ', source)
+        #print('target: ', self._filter_vocab(target))
         return source, self._filter_vocab(target)
 
     def _filter_vocab(self, target):
@@ -197,6 +201,7 @@ class MonolingualDataset(FairseqDataset):
         else:
             order = [np.arange(len(self))]
         order.append(self.sizes)
+        print(order)
         return np.lexsort(order)
 
     @property
@@ -204,4 +209,5 @@ class MonolingualDataset(FairseqDataset):
         return getattr(self.dataset, 'supports_prefetch', False)
 
     def prefetch(self, indices):
+        sys.exit()
         self.dataset.prefetch(indices)

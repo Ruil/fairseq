@@ -109,6 +109,8 @@ class LanguageModelingTask(FairseqTask):
         dictionary = None
         output_dictionary = None
         if args.data:
+            #print('args.data: ', args.data)
+            #sys.exit()
             dictionary = Dictionary.load(os.path.join(args.data, 'dict.txt'))
             print('| dictionary: {} types'.format(len(dictionary)))
             output_dictionary = dictionary

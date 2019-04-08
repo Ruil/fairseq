@@ -38,6 +38,10 @@ class FConvModelSelfAtt(FairseqModel):
         # these are forwarded and then combined in the decoder
         self.encoder = CompositeEncoder(encoders)
 
+    @property
+    def supported_targets(self):
+        return {'future'}
+
     @staticmethod
     def add_args(parser):
         """Add model-specific arguments to the parser."""
@@ -80,6 +84,11 @@ class FConvModelSelfAtt(FairseqModel):
 
     @classmethod
     def build_model(cls, args, task):
+        if not hasattr(args, 'max_source_positions'):
+            args.max_source_positions = 1024
+        if not hasattr(args, 'max_target_positions'):
+            args.max_target_positions = 1024
+
         trained_encoder, trained_decoder = None, None
         pretrained = eval(args.pretrained)
         if pretrained:

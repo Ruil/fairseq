@@ -38,6 +38,7 @@ class SentenceBlockDataset(FairseqDataset):
         # build index mapping block indices to the underlying dataset indices
         self.block_to_dataset_index = np.empty((length, 3), dtype=int)
         ds_idx, ds_remaining = -1, 0
+        print('dataset: ', dataset)
         print('sizes: ', sizes)
         print('len sizes: ', len(sizes))
         print('dim_offsets: ', dim_offsets)
@@ -45,8 +46,9 @@ class SentenceBlockDataset(FairseqDataset):
         print('length: ', length)
         print('shape: ', self.block_to_dataset_index.shape)     
         print('total_size: ', total_size)  
-        self.sizes = np.arange(length, dtype=int)
-
+        self.src_sizes = np.empty(length, dtype=int)
+        self.tgt_sizes = np.empty(length, dtype=int)
+        #sys.exit()
         start_ds_idx = 0
         block_idx = 0
         prev = 0
@@ -67,7 +69,12 @@ class SentenceBlockDataset(FairseqDataset):
                     start_offset,  # starting offset within starting index
                     ds_idx,  # ending index in dataset
                 )
-                self.sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
+
+                target_idx = start_ds_idx + start_offset
+                self.src_sizes[block_idx] = sum(sizes[start_ds_idx:target_idx]) + 1 + sum(sizes[target_idx + 1:ds_idx + 1])
+                self.tgt_sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
+                
+                #self.sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
                 #print('sizes at idx: ', self.sizes[block_idx])
                 block_idx += 1
                 #print('start_ds_idx: ', start_ds_idx)
@@ -76,7 +83,7 @@ class SentenceBlockDataset(FairseqDataset):
             start_ds_idx = ds_idx + 1
         print('block_idx: ', block_idx) 
         print('length: ', length)
-        print('self.sizes: ', self.sizes)
+        #print('self.sizes: ', self.sizes)
         assert dim_offsets[-1] == len(sizes) 
         assert length == block_idx
         #sys.exit() 
@@ -84,28 +91,36 @@ class SentenceBlockDataset(FairseqDataset):
     def __getitem__(self, index):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]
         target_idx = start_ds_idx + start_offset
+        target = torch.cat([self.dataset[target_idx]])
+
         before = torch.cat([
-            self.dataset[idx] for idx in range(start_ds_idx, start_ds_idx + 1)
-        ])
-        target = self.dataset[target_idx]
-        after = torch.cat([
-            self.dataset[idx] for idx in range(start_ds_idx + 1, end_ds_idx + 1)
-        ])
+            self.dataset[idx] for idx in range(start_ds_idx,  target_idx)
+        ]) if start_ds_idx <= target_idx - 1 else torch.empty(0, dtype=target.dtype)
+        after =  torch.cat([
+            self.dataset[idx] for idx in range(target_idx + 1,  end_ds_idx + 1)
+        ]) if target_idx + 1 <= end_ds_idx else torch.empty(0, dtype=target.dtype)
         item = torch.cat([
             before, target, after
         ])
         source = torch.cat([
             before, item.new([self.mask]), after
         ])      
-        target = torch.cat([target])
         print('idx: ', index)
         print('target: ', target)
         print('item: ', item)
         print('source: ', source)
-        sys.exit()
+        #sys.exit()
         # *item* is the original sentences target + context (=item)
         # *source* is sentences without the target sentence, and with the target position delimiter
         # *target* is the target sentence, target only
+        #self.sizes[block_idx][0] = source.size()
+        #self.sizes[block_idx][1] = item.size()
+        #print('source size: ', source.size())
+        #print('target size: ', item.size())
+        #print('total size: ', self.sizes[index])
+        assert self.src_sizes[index] == source.size()
+        assert self.tgt_sizes[index] == item.size()
+        #sys.exit()
         return source, item, target
 
     def __len__(self):
