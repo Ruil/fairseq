@@ -131,7 +131,9 @@ class LanguageModelingTask(FairseqTask):
         if len(targets) == 0:
             # standard language modeling
             targets = ['future']
-
+         
+        #print(targets)
+        #sys.exit()
         return cls(args, dictionary, output_dictionary, targets=targets)
 
     def build_model(self, args):

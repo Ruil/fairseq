@@ -38,7 +38,7 @@ class SentenceBlockDataset(FairseqDataset):
         # build index mapping block indices to the underlying dataset indices
         self.block_to_dataset_index = np.empty((length, 3), dtype=int)
         ds_idx, ds_remaining = -1, 0
-        print('dataset: ', dataset)
+        #print('dataset: ', dataset)
         print('sizes: ', sizes)
         print('len sizes: ', len(sizes))
         print('dim_offsets: ', dim_offsets)
@@ -109,7 +109,7 @@ class SentenceBlockDataset(FairseqDataset):
         print('target: ', target)
         print('item: ', item)
         print('source: ', source)
-        #sys.exit()
+        sys.exit()
         # *item* is the original sentences target + context (=item)
         # *source* is sentences without the target sentence, and with the target position delimiter
         # *target* is the target sentence, target only

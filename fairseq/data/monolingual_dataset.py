@@ -72,8 +72,8 @@ class MonolingualDataset(FairseqDataset):
         self.max_source_positions = max_source_positions
         self.max_target_positions = max_target_positions
            
-        print(targets)
-        sys.exit()
+        #print(targets)
+        #sys.exit()
         assert targets is None or all(t in {'self', 'future', 'past'} for t in targets), \
             "targets must be none or one of 'self', 'future', 'past'"
         if targets is not None and len(targets) == 0:
@@ -81,6 +81,8 @@ class MonolingualDataset(FairseqDataset):
         self.targets = targets
 
     def __getitem__(self, index):
+        #print('targets: ', self.targets)
+        sys.exit()
         if self.targets is not None:
             source, future_target, past_target = self.dataset[index]
             source, target = self._make_source_target(source, future_target, past_target)

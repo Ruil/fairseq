@@ -110,22 +110,24 @@ class MonoLingualPairDataset(FairseqDataset):
         self.remove_eos_from_source = remove_eos_from_source
         self.append_eos_to_target = append_eos_to_target
 
-        print('targets: ', targets)
-        #sys.exit()
         assert targets is None or all(t in {'self', 'future', 'past'} for t in targets), \
             "targets must be none or one of 'self', 'future', 'past'"
         if targets is not None and len(targets) == 0:
             targets = None
         self.targets = targets
 
+        #print('targets: ', targets)
+        #sys.exit()
+
     def __getitem__(self, index):
-        print(self.targets)
-        # if self.targets is not None:
-        source, future_target, past_target = self.dataset[index]
-        source, target = self._make_source_target(source, future_target, past_target)
-        # else:
-        #    source = self.dataset[index]
-        #    target = None
+        #print(self.targets)
+        #sys.exit()
+        if self.targets is not None:
+            source, future_target, past_target = self.dataset[index]
+            source, target = self._make_source_target(source, future_target, past_target)
+        else:
+            source = self.dataset[index]
+            target = None
 
         #print('id: ', index)
         #print('source: ', source)
@@ -163,6 +165,7 @@ class MonoLingualPairDataset(FairseqDataset):
                     past_target = torch.cat([past_target.new([self.src_dict.pad()]), past_target[1:], source[-2, None]])
 
             print('self.targets: ', self.targets)
+            sys.exit()
             for t in self.targets:
                 if t == 'self':
                     target.append(source)

@@ -156,7 +156,8 @@ class SeqLanguageModelingTask(FairseqTask):
         if len(targets) == 0:
             # standard language modeling
             targets = ['future']
-
+        #print(targets)
+        #sys.exit()
         return cls(args, dictionary, output_dictionary, targets=targets)
 
     def build_model(self, args):
@@ -231,6 +232,7 @@ class SeqLanguageModelingTask(FairseqTask):
             left_pad_target=self.args.left_pad_target,
             max_source_positions=self.args.max_source_positions,
             max_target_positions=self.args.max_target_positions,
+            targets=self.targets
         )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths):
