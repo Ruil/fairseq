@@ -71,9 +71,12 @@ class SentenceBlockDataset(FairseqDataset):
                 )
 
                 target_idx = start_ds_idx + start_offset
-                self.src_sizes[block_idx] = sum(sizes[start_ds_idx:target_idx]) + 1 + sum(sizes[target_idx + 1:ds_idx + 1])
-                self.tgt_sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
-                
+                self.src_sizes[block_idx] = sum(sizes[start_ds_idx:target_idx]) + 3 + sum(sizes[target_idx + 1:ds_idx + 1])
+                # setting 1: incldue context in the target
+                #self.tgt_sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
+                # setting 2: target only
+                self.tgt_sizes[block_idx] = sum(sizes[target_idx:target_idx + 1])
+                 
                 #self.sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
                 #print('sizes at idx: ', self.sizes[block_idx])
                 block_idx += 1
@@ -100,10 +103,13 @@ class SentenceBlockDataset(FairseqDataset):
             self.dataset[idx] for idx in range(target_idx + 1,  end_ds_idx + 1)
         ]) if target_idx + 1 <= end_ds_idx else torch.empty(0, dtype=target.dtype)
         item = torch.cat([
-            before, target, after
+            # setting 1
+            #before, target, after
+            #setting 2
+            target,
         ])
         source = torch.cat([
-            before, item.new([self.mask]), after
+            before, item.new([self.mask, self.mask, self.mask]), after
         ])      
         #print('idx: ', index)
         #print('target: ', target)
