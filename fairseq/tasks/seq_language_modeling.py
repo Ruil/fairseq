@@ -228,6 +228,7 @@ class SeqLanguageModelingTask(FairseqTask):
         self.datasets[split] = MonoLingualPairDataset(
             dataset, dataset.src_sizes, self.dictionary,
             dataset.tgt_sizes, self.output_dictionary,
+            add_eos_for_other_targets,
             left_pad_source=self.args.left_pad_source,
             left_pad_target=self.args.left_pad_target,
             max_source_positions=self.args.max_source_positions,
@@ -236,7 +237,6 @@ class SeqLanguageModelingTask(FairseqTask):
         )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths):
-        sys.exit()
         return LanguagePairDataset(src_tokens, src_lengths, self.source_dictionary)
 
     def max_positions(self):

@@ -186,8 +186,8 @@ class IndexedCachedSentenceDataset(IndexedCachedDataset):
     def __getitem__(self, i):
         self.check_index(i)
         tensor_size = self.sizes[i]
-        print('tensor_size: ', tensor_size)
-        print('i: ', i)
+        #print('tensor_size: ', tensor_size)
+        #print('i: ', i)
 
         a = np.empty(tensor_size, dtype=self.dtype)
         ptx = self.cache_index[i]
@@ -195,7 +195,7 @@ class IndexedCachedSentenceDataset(IndexedCachedDataset):
         item = torch.from_numpy(a).long()
         if self.fix_lua_indexing:
             item -= 1  # subtract 1 for 0-based indexing
-        print('item: ', item)
+        #print('item: ', item)
         #sys.exit()
         return item
 

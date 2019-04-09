@@ -105,11 +105,11 @@ class SentenceBlockDataset(FairseqDataset):
         source = torch.cat([
             before, item.new([self.mask]), after
         ])      
-        print('idx: ', index)
-        print('target: ', target)
-        print('item: ', item)
-        print('source: ', source)
-        sys.exit()
+        #print('idx: ', index)
+        #print('target: ', target)
+        #print('item: ', item)
+        #print('source: ', source)
+        #sys.exit()
         # *item* is the original sentences target + context (=item)
         # *source* is sentences without the target sentence, and with the target position delimiter
         # *target* is the target sentence, target only

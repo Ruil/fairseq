@@ -91,7 +91,7 @@ class MonoLingualPairDataset(FairseqDataset):
     """
 
     def __init__(
-        self, dataset, src_sizes, dictionary, tgt_sizes, output_dictionary,
+        self, dataset, src_sizes, dictionary, tgt_sizes=None, output_dictionary=None, add_eos_for_other_targets=None,
         left_pad_source=True, left_pad_target=False,
         max_source_positions=1024, max_target_positions=1024,
         shuffle=True, targets=None, input_feeding=True, remove_eos_from_source=False, append_eos_to_target=False,
@@ -101,6 +101,7 @@ class MonoLingualPairDataset(FairseqDataset):
         self.tgt_sizes = tgt_sizes
         self.src_dict = dictionary
         self.tgt_dict = output_dictionary
+        self.add_eos_for_other_targets = add_eos_for_other_targets
         self.left_pad_source = left_pad_source
         self.left_pad_target = left_pad_target
         self.max_source_positions = max_source_positions
@@ -164,8 +165,8 @@ class MonoLingualPairDataset(FairseqDataset):
                     # add_eos_for_other_targets is False
                     past_target = torch.cat([past_target.new([self.src_dict.pad()]), past_target[1:], source[-2, None]])
 
-            print('self.targets: ', self.targets)
-            sys.exit()
+            #print('self.targets: ', self.targets)
+            #sys.exit()
             for t in self.targets:
                 if t == 'self':
                     target.append(source)

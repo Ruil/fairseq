@@ -52,11 +52,11 @@ class LabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         lprobs = lprobs.view(-1, lprobs.size(-1))
         target = model.get_targets(sample, net_output).view(-1, 1)
         non_pad_mask = target.ne(self.padding_idx)
-        print('net_output 0: ', net_output[0].size())
-        print('net_output 1: ', net_output[1])
-        print('target: ', target.size())
-        print('non_pad_mask: ', non_pad_mask.size())
-        print('lprobs: ', lprobs.size())
+        #print('net_output 0: ', net_output[0].size())
+        #print('net_output 1: ', net_output[1])
+        #print('target: ', target.size())
+        #print('non_pad_mask: ', non_pad_mask.size())
+        #print('lprobs: ', lprobs.size())
         nll_loss = -lprobs.gather(dim=-1, index=target)[non_pad_mask]
         smooth_loss = -lprobs.sum(dim=-1, keepdim=True)[non_pad_mask]
         if reduce:

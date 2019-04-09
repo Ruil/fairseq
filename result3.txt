@@ -1,0 +1,31 @@
+Namespace(alignfile=None, cpu=False, destdir='data-bin/wikitext-2', fp16=False, fp16_init_scale=128, fp16_scale_tolerance=0.0, fp16_scale_window=None, joined_dictionary=False, log_format=None, log_interval=1000, memory_efficient_fp16=False, min_loss_scale=0.0001, no_progress_bar=False, nwordssrc=-1, nwordstgt=-1, only_source=True, output_format='binary', padding_factor=8, seed=1, sentence_tokenizer=False, source_lang=None, srcdict=None, target_lang=None, task='translation', tensorboard_logdir='', testpref='examples/language_model/wikitext-2/wiki.test.tokens', tgtdict=None, threshold_loss_scale=None, thresholdsrc=0, thresholdtgt=0, trainpref='examples/language_model/wikitext-2/wiki.train.tokens', user_dir=None, validpref='examples/language_model/wikitext-2/wiki.valid.tokens', workers=1)
+task:  translation
+sentence-tokenizer:  False
+input_prefix:  examples/language_model/wikitext-2/wiki.train.tokens
+output_prefix:  train
+worker:  1
+| [None] Dictionary: 33287 types
+input_file:  examples/language_model/wikitext-2/wiki.train.tokens
+offsets:  [0, 0]
+ds:  data-bin/wikitext-2/train.bin
+sentence_tokenizer:  False
+| [None] examples/language_model/wikitext-2/wiki.train.tokens: 36718 sents, 2088628 tokens, 0.0% replaced by <unk>
+input_prefix:  examples/language_model/wikitext-2/wiki.valid.tokens
+output_prefix:  valid
+worker:  1
+| [None] Dictionary: 33287 types
+input_file:  examples/language_model/wikitext-2/wiki.valid.tokens
+offsets:  [0, 0]
+ds:  data-bin/wikitext-2/valid.bin
+sentence_tokenizer:  False
+| [None] examples/language_model/wikitext-2/wiki.valid.tokens: 3760 sents, 217646 tokens, 0.0% replaced by <unk>
+input_prefix:  examples/language_model/wikitext-2/wiki.test.tokens
+output_prefix:  test
+worker:  1
+| [None] Dictionary: 33287 types
+input_file:  examples/language_model/wikitext-2/wiki.test.tokens
+offsets:  [0, 0]
+ds:  data-bin/wikitext-2/test.bin
+sentence_tokenizer:  False
+| [None] examples/language_model/wikitext-2/wiki.test.tokens: 4358 sents, 245569 tokens, 0.0% replaced by <unk>
+| Wrote preprocessed data to data-bin/wikitext-2
