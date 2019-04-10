@@ -237,7 +237,11 @@ class MonoLingualPairDataset(FairseqDataset):
             max_positions,
             (self.max_source_positions, self.max_target_positions),
         )
-        bsz = max(num_tokens // max(src_len, tgt_len), 1)
+        print('src_len: ', src_len)
+        print('tgt_len: ', tgt_len)
+        bsz = 1 #max(num_tokens // max(src_len, tgt_len), 1)
+        print('bsz: ', bsz)
+        #sys.exit()
         return self.collater([
             {
                 'id': i,

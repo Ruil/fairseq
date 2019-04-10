@@ -96,6 +96,7 @@ def filter_by_size(indices, size_fn, max_positions, raise_exception=False):
                 for key in intersect_keys
             )
         else:
+            #print('size: ', size_fn(idx))
             return all(a is None or b is None or a <= b
                        for a, b in zip(size_fn(idx), max_positions))
 
