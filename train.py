@@ -58,6 +58,9 @@ def main(args, init_distributed=False):
         task.max_positions(),
         model.max_positions(),
     )
+    print('max_p: ',  max_positions)
+    print('max_p task: ',  task.max_positions())
+    print('max_p model: ',  model.max_positions())
     dummy_batch = task.dataset(args.train_subset).get_dummy_batch(args.max_tokens, max_positions)
     oom_batch = task.dataset(args.train_subset).get_dummy_batch(1, max_positions)
 

@@ -45,13 +45,15 @@ class SentenceBlockDataset(FairseqDataset):
         print('len dim_offsets: ', len(dim_offsets))
         print('length: ', length)
         print('shape: ', self.block_to_dataset_index.shape)     
-        print('total_size: ', total_size)  
+        print('total_size: ', total_size)
+        #sys.exit() 
         self.src_sizes = np.empty(length, dtype=int)
         self.tgt_sizes = np.empty(length, dtype=int)
         #sys.exit()
         start_ds_idx = 0
         block_idx = 0
         prev = 0
+        invalid = 0
         for idx in range(len(dim_offsets) - 1):
             #print('idx: ', idx)
             #print('idx max: ', len(dim_offsets))
@@ -72,6 +74,8 @@ class SentenceBlockDataset(FairseqDataset):
 
                 target_idx = start_ds_idx + start_offset
                 self.src_sizes[block_idx] = sum(sizes[start_ds_idx:target_idx]) + 3 + sum(sizes[target_idx + 1:ds_idx + 1])
+                #print('story len: ', sum(sizes[start_ds_idx:ds_idx + 1]))
+                #invalid += 1 if sum(sizes[start_ds_idx:ds_idx + 1]) > 1022 else 0 
                 # setting 1: incldue context in the target
                 #self.tgt_sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
                 # setting 2: target only
@@ -89,6 +93,7 @@ class SentenceBlockDataset(FairseqDataset):
         #print('self.sizes: ', self.sizes)
         assert dim_offsets[-1] == len(sizes) 
         assert length == block_idx
+        #print('invalid: ', invalid)
         #sys.exit() 
 
     def __getitem__(self, index):

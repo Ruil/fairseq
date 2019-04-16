@@ -85,9 +85,10 @@ class FConvModelSelfAtt(FairseqModel):
     @classmethod
     def build_model(cls, args, task):
         if not hasattr(args, 'max_source_positions'):
-            args.max_source_positions = 1024
+            args.max_source_positions = 1500
         if not hasattr(args, 'max_target_positions'):
-            args.max_target_positions = 1024
+            args.max_target_positions = 1500
+        #print(args)        
 
         trained_encoder, trained_decoder = None, None
         pretrained = eval(args.pretrained)
@@ -117,7 +118,6 @@ class FConvModelSelfAtt(FairseqModel):
             attention=eval(args.encoder_attention),
             attention_nheads=args.encoder_attention_nheads
         )
-
         decoder = FConvDecoder(
             task.target_dictionary,
             embed_dim=args.decoder_embed_dim,
@@ -147,7 +147,7 @@ class FConvModelSelfAtt(FairseqModel):
 class FConvEncoder(FairseqEncoder):
     """Convolutional encoder"""
     def __init__(
-        self, dictionary, embed_dim=512, max_positions=1024,
+        self, dictionary, embed_dim=512, max_positions=1500,
         convolutions=((512, 3),) * 20, dropout=0.1, attention=False,
         attention_nheads=1, left_pad=True,
     ):
@@ -165,7 +165,7 @@ class FConvEncoder(FairseqEncoder):
             self.padding_idx,
             left_pad=self.left_pad,
         )
-
+       
         def expand_bool_array(val):
             if isinstance(val, bool):
                 # expand True into [True, True, ...] and do the same with False
@@ -274,7 +274,7 @@ class FConvEncoder(FairseqEncoder):
 class FConvDecoder(FairseqDecoder):
     """Convolutional decoder"""
     def __init__(
-        self, dictionary, embed_dim=512, out_embed_dim=256, max_positions=1024,
+        self, dictionary, embed_dim=512, out_embed_dim=256, max_positions=1500,
         convolutions=((512, 3),) * 8, attention=True, dropout=0.1,
         selfattention=False, attention_nheads=1, selfattention_nheads=1,
         project_input=False, gated_attention=False, downsample=False,
@@ -305,14 +305,12 @@ class FConvDecoder(FairseqDecoder):
         num_embeddings = len(dictionary)
         padding_idx = dictionary.pad()
         self.embed_tokens = Embedding(num_embeddings, embed_dim, padding_idx)
-
         self.embed_positions = PositionalEmbedding(
             max_positions,
             embed_dim,
             padding_idx,
             left_pad=self.left_pad,
         )
-
         self.fc1 = Linear(embed_dim, in_channels, dropout=dropout)
         self.projections = nn.ModuleList()
         self.convolutions = nn.ModuleList()
