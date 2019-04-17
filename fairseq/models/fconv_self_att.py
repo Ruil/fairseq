@@ -80,6 +80,8 @@ class FConvModelSelfAtt(FairseqModel):
                             help='path to load checkpoint from pretrained model')
         parser.add_argument('--pretrained', type=str, metavar='EXPR',
                             help='use pretrained model when training [True, ...]')
+        parser.add_argument('--copy-net',  type=str, metavar='EXPR',
+                            help='copy net')
         # fmt: on
 
     @classmethod
@@ -133,7 +135,8 @@ class FConvModelSelfAtt(FairseqModel):
             gated_attention=eval(args.gated_attention),
             downsample=eval(args.downsample),
             pretrained=pretrained,
-            trained_decoder=trained_decoder
+            trained_decoder=trained_decoder,
+            copy_net=False
         )
         model = FConvModelSelfAtt(encoder, decoder, trained_encoder)
 
@@ -197,12 +200,18 @@ class FConvEncoder(FairseqEncoder):
 
     def forward(self, src_tokens, src_lengths):
         # embed tokens and positions
+        print('src_tokens: ', src_tokens)
+        print('src_lengths: ', src_lengths)
         x = self.embed_tokens(src_tokens) + self.embed_positions(src_tokens)
         x = F.dropout(x, p=self.dropout, training=self.training)
+        print('x: ', x.size())
         input_embedding = x.transpose(0, 1)
+        print('x_1: ', x)
 
         # project to size of convolution
         x = self.fc1(x)
+        print('x_1 proj: ', x)
+        #sys.exit()
 
         encoder_padding_mask = src_tokens.eq(self.padding_idx).t()  # -> T x B
         if not encoder_padding_mask.any():
@@ -230,10 +239,12 @@ class FConvEncoder(FairseqEncoder):
 
         # T x B x C -> B x T x C
         x = x.transpose(1, 0)
-
+       
+        print('x att: ', x.size())
         # project back to size of embedding
         x = self.fc2(x)
-
+        print('x proj: ', x.size())
+        #sys.exit()  
         if encoder_padding_mask is not None:
             encoder_padding_mask = encoder_padding_mask.t()  # -> B x T
             x = x.masked_fill(encoder_padding_mask.unsqueeze(-1), 0)
@@ -243,7 +254,8 @@ class FConvEncoder(FairseqEncoder):
 
         # add output to input embedding for attention
         y = (x + input_embedding.transpose(0, 1)) * math.sqrt(0.5)
-
+        print('y: ', y.size())
+        #sys.exit()
         return {
             'encoder_out': (x, y),
             'encoder_padding_mask': encoder_padding_mask,  # B x T
@@ -278,12 +290,13 @@ class FConvDecoder(FairseqDecoder):
         convolutions=((512, 3),) * 8, attention=True, dropout=0.1,
         selfattention=False, attention_nheads=1, selfattention_nheads=1,
         project_input=False, gated_attention=False, downsample=False,
-        pretrained=False, trained_decoder=None, left_pad=False,
+        pretrained=False, trained_decoder=None, left_pad=False, copy_net=False
     ):
         super().__init__(dictionary)
         self.register_buffer('version', torch.Tensor([2]))
         self.pretrained = pretrained
         self.pretrained_decoder = trained_decoder
+        self.copy_net = copy_net
         self.dropout = dropout
         self.left_pad = left_pad
         self.need_attn = True
@@ -379,9 +392,12 @@ class FConvDecoder(FairseqDecoder):
             self.pretrained_decoder.fc2.register_forward_hook(save_output())
 
     def forward(self, prev_output_tokens, encoder_out_dict):
+        print('prev: ', prev_output_tokens)
         encoder_out = encoder_out_dict['encoder']['encoder_out']
+        print('en_out: {0}, {1}', len(encoder_out), encoder_out[0].size())
+        #sys.exit()
         trained_encoder_out = encoder_out_dict['pretrained'] if self.pretrained else None
-
+        
         encoder_a, encoder_b = self._split_encoder_out(encoder_out)
 
         # embed positions
@@ -445,9 +461,15 @@ class FConvDecoder(FairseqDecoder):
             fusion = torch.cat([gated_x1, gated_x2], dim=-1)
             fusion = self.joining(fusion)
             fusion_output = self.fc3(fusion)
-            return fusion_output, avg_attn_scores
-        else:
-            return x, avg_attn_scores
+            x = fusion_output
+        
+        if self.copy_net:
+            print('x: ', x)
+            print('x shape: ', x.size())
+            print('avg_attn_scores: ', avg_attn_scores)
+            sys.exit()
+
+        return x, avg_attn_scores
 
     def max_positions(self):
         """Maximum output length supported by the decoder."""
