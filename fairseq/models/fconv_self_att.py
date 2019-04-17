@@ -206,11 +206,11 @@ class FConvEncoder(FairseqEncoder):
         x = F.dropout(x, p=self.dropout, training=self.training)
         print('x: ', x.size())
         input_embedding = x.transpose(0, 1)
-        print('x_1: ', x)
+        #print('x_1: ', x)
 
         # project to size of convolution
         x = self.fc1(x)
-        print('x_1 proj: ', x)
+        #print('x_1 proj: ', x)
         #sys.exit()
 
         encoder_padding_mask = src_tokens.eq(self.padding_idx).t()  # -> T x B
