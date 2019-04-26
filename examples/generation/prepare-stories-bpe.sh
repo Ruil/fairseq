@@ -20,7 +20,11 @@ if [ ! -d "$SCRIPTS" ]; then
     exit
 fi
 
+<<<<<<< HEAD
 orig=/home/ruil/generation/ruimodified_fairseq/fairseq/examples/language_model/wikitext-2
+=======
+orig=../language_model/wikitext-2
+>>>>>>> d9df1fb7636222402d4553db6d00902e7f5b4a4a
 prep=bpe
 tmp=$prep/tmp
 DATA_PATH='./bpe'
