@@ -136,7 +136,7 @@ class FConvModelSelfAtt(FairseqModel):
             downsample=eval(args.downsample),
             pretrained=pretrained,
             trained_decoder=trained_decoder,
-            copy_net=False
+            copy_net=eval(args.copy_net)
         )
         model = FConvModelSelfAtt(encoder, decoder, trained_encoder)
 
@@ -200,17 +200,18 @@ class FConvEncoder(FairseqEncoder):
 
     def forward(self, src_tokens, src_lengths):
         # embed tokens and positions
-        print('src_tokens: ', src_tokens)
-        print('src_lengths: ', src_lengths)
+        #print('src_tokens: ', src_tokens)
+        #sys.exit()
+        #print('src_lengths: ', src_lengths)
         x = self.embed_tokens(src_tokens) + self.embed_positions(src_tokens)
         x = F.dropout(x, p=self.dropout, training=self.training)
-        print('x: ', x.size())
+        #print('x: ', x.size())
         input_embedding = x.transpose(0, 1)
-        print('x_1: ', x)
+        #print('x_1: ', x)
 
         # project to size of convolution
         x = self.fc1(x)
-        print('x_1 proj: ', x)
+        #print('x_1 proj: ', x)
         #sys.exit()
 
         encoder_padding_mask = src_tokens.eq(self.padding_idx).t()  # -> T x B
@@ -301,7 +302,7 @@ class FConvDecoder(FairseqDecoder):
         self.left_pad = left_pad
         self.need_attn = True
         in_channels = convolutions[0][0]
-
+       
         def expand_bool_array(val):
             if isinstance(val, bool):
                 # expand True into [True, True, ...] and do the same with False
@@ -391,15 +392,16 @@ class FConvDecoder(FairseqDecoder):
 
             self.pretrained_decoder.fc2.register_forward_hook(save_output())
 
-    def forward(self, prev_output_tokens, encoder_out_dict):
-        print('prev: ', prev_output_tokens)
+    def forward(self, prev_output_tokens, encoder_out_dict, src_tokens=None):
+        #print('prev: ', prev_output_tokens)
         encoder_out = encoder_out_dict['encoder']['encoder_out']
-        print('en_out: {0}, {1}', len(encoder_out), encoder_out[0].size())
+        #print('en_out: {0}, {1}', len(encoder_out), encoder_out[0].size(), encoder_out[1].size())
+        #print('en_out 1: ', encoder_out[0])
         #sys.exit()
         trained_encoder_out = encoder_out_dict['pretrained'] if self.pretrained else None
         
         encoder_a, encoder_b = self._split_encoder_out(encoder_out)
-
+       
         # embed positions
         positions = self.embed_positions(prev_output_tokens)
 
@@ -416,26 +418,40 @@ class FConvDecoder(FairseqDecoder):
 
         # temporal convolutions
         avg_attn_scores = None
+        avg_attn_logits = None
         for proj, conv, attention, selfattention, attproj in zip(
             self.projections, self.convolutions, self.attention, self.selfattention, self.attproj
         ):
             residual = x if proj is None else proj(x)
+            #print('proj: ', proj)
+            #print('att: ', attention)
+            #print('self-att: ', selfattention)
+            #sys.exit()
 
             x = F.dropout(x, p=self.dropout, training=self.training)
             x = conv(x)
             x = F.glu(x, dim=2)
-
+   
             # attention
             if attention is not None:
                 r = x
-                x, attn_scores = attention(attproj(x) + target_embedding, encoder_a, encoder_b)
+                print('r: ', x.size())
+
+                x, attn_scores, attn_logits = attention(attproj(x) + target_embedding, encoder_a, encoder_b)
                 x = x + r
+      
+                avg_attn_logits = attn_logits if avg_attn_logits is None else avg_attn_logits + attn_logits
+                
+                #print('att scores: ', attn_scores.size())
+                #print('att attn_logits: ', attn_logits.size())
+                #print('x: ', x.size())
                 if not self.training and self.need_attn:
                     if avg_attn_scores is None:
                         avg_attn_scores = attn_scores
                     else:
                         avg_attn_scores.add_(attn_scores)
-
+                print('self.copy_net: ', self.copy_net)
+                #sys.exit()
             if selfattention is not None:
                 x = selfattention(x)
 
@@ -446,10 +462,17 @@ class FConvDecoder(FairseqDecoder):
 
         # project back to size of vocabulary
         x = self.fc2(x)
+        print('fc2: ', x.size())
+        #sys.exit()
         x = F.dropout(x, p=self.dropout, training=self.training)
         if not self.pretrained:
             x = self.fc3(x)
-
+        print('fc3: ', x.size())
+      
+        if self.copy_net:
+            assert src_tokens is not None, 'src_tokens is None'
+            x = self.merge_copy_logits(x, avg_attn_logits, src_tokens)
+    
         # fusion gating
         if self.pretrained:
             trained_x, _ = self.pretrained_decoder.forward(prev_output_tokens, trained_encoder_out)
@@ -462,14 +485,24 @@ class FConvDecoder(FairseqDecoder):
             fusion = self.joining(fusion)
             fusion_output = self.fc3(fusion)
             x = fusion_output
-        
-        if self.copy_net:
-            print('x: ', x)
-            print('x shape: ', x.size())
-            print('avg_attn_scores: ', avg_attn_scores)
-            sys.exit()
 
         return x, avg_attn_scores
+
+    def merge_copy_logits(self, decoder_logits, copy_logits, src_map):
+        batch_size, max_length, _ = decoder_logits.size()
+        src_len = src_map.size(1)
+
+        # flatten and extend size of decoder_probs from (vocab_size) to (vocab_size+max_oov_number)
+        flattened_decoder_logits = decoder_logits.view(batch_size * max_length, -1)
+        print('flattened_decoder_logits: ', flattened_decoder_logits.size())
+        print('decoder_logits: ', decoder_logits.size())
+        #sys.exit() 
+                
+        # add probs of copied words by scatter_add_(dim, index, src), index should be in the same shape with src. decoder_probs=(batch_size * trg_len, vocab_size+max_oov_number), copy_weights=(batch_size, trg_len, src_len)
+        expanded_src_map = src_map.unsqueeze(1).expand(batch_size, max_length, src_len).contiguous().view(batch_size * max_length, -1)  # (batch_size, src_len) -> (batch_size * trg_len, src_len)
+        # flattened_decoder_logits.scatter_add_(dim=1, index=expanded_src_map, src=copy_logits.view(batch_size * max_length, -1))
+        flattened_decoder_logits = flattened_decoder_logits.scatter_add_(1, expanded_src_map, copy_logits.view(batch_size * max_length, -1))
+        return flattened_decoder_logits
 
     def max_positions(self):
         """Maximum output length supported by the decoder."""
@@ -506,7 +539,7 @@ class SelfAttention(nn.Module):
         query = self.in_proj_q(x)
         key = self.in_proj_k(x)
         value = self.in_proj_v(x)
-        x, _ = self.attention(query, key, value, mask_future_timesteps=True, use_scalar_bias=True)
+        x, _, _ = self.attention(query, key, value, mask_future_timesteps=True, use_scalar_bias=True)
         return self.ln(x + residual)
 
 

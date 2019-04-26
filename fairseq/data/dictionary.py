@@ -19,7 +19,7 @@ from fairseq.data import data_utils
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', sentence_tokenizer=False):
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', sentence_tokenizer=False, copy_net=False):
         self.unk_word, self.pad_word, self.eos_word, self.mask_word = unk, pad, eos, mask
         self.symbols = []
         self.count = []
@@ -32,6 +32,7 @@ class Dictionary(object):
         self.mask_index = self.add_symbol(mask)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
+        self.copy_net = copy_net
         self.meta_keys = ['sentence_tokenizer']
         self.meta_vals = [self.sentence_tokenizer]
 
@@ -232,6 +233,56 @@ class Dictionary(object):
         t = torch.Tensor(length).uniform_(self.nspecial + 1, len(self)).long()
         t[-1] = self.eos()
         return t
+
+    def sentence_copy_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
+                    consumer=None, append_eos=True, reverse_order=False, max_oov_words=1000):   
+        sentences = sentence_tokenize_line(line)
+        sentence_ids = []
+        sentence_copy_ids = []
+        oov_dict = {}
+        for i, sentence in enumerate(sentences):
+            if sentence.strip() == '':
+                continue
+            line = sentence
+            words = line_tokenizer(line)
+            if reverse_order:
+                words = list(reversed(words))
+            nwords = len(words)
+            ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+            copy_ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+            for j, word in enumerate(words):
+                if add_if_not_exist:
+                    idx = self.add_symbol(word)
+                else:
+                    idx = self.index(word)
+                if consumer is not None:
+                    consumer(word, idx)
+                ids[j] = idx
+                
+                if word in self.indices:
+                    copy_idx = self.indices[word]
+                else:
+                    if len(oov_dict) < max_oov_words:
+                        copy_idx = len(self.symbols) + len(oov_dict)
+                        oov_dict[w] = copy_idx
+                    else:
+                        copy_idx = self.unk_index
+                copy_ids[j] = copy_idx
+
+            if append_eos:
+                ids[nwords] = self.eos_index
+                copy_ids[nwords] = self.eos_index
+
+            sentence_ids.append(ids)
+            sentence_copy_ids.append(copy_ids)
+        
+        #A list of the OOV words in the article (strings), in the order corresponding to their temporary article OOV numbers.
+        oov_list = [w for w, w_id in sorted(oov_dict.items(), key=lambda x:x[1])]
+        
+        print('copy net: ', self.copy_net)
+        if self.copy_net:
+            return sentence_copy_ids, oov_list
+        return sentence_ids
 
     def sentence_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
                     consumer=None, append_eos=True, reverse_order=False):   

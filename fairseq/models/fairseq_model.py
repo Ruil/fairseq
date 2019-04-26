@@ -176,7 +176,7 @@ class FairseqModel(BaseFairseqModel):
             the decoder's output, typically of shape `(batch, tgt_len, vocab)`
         """
         encoder_out = self.encoder(src_tokens, src_lengths)
-        decoder_out = self.decoder(prev_output_tokens, encoder_out)
+        decoder_out = self.decoder(prev_output_tokens, encoder_out, src_tokens=src_tokens)
         return decoder_out
 
     def max_positions(self):

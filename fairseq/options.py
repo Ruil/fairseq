@@ -211,6 +211,8 @@ def add_preprocess_args(parser):
                        help="number of parallel workers")
     group.add_argument("--sentence-tokenizer", default=False, action='store_true',
                        help="number of parallel workers")
+    group.add_argument("--copy-net", default=False, action='store_true',
+                       help="number of parallel workers")
     # fmt: on
     return parser
 

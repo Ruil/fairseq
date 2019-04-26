@@ -237,6 +237,7 @@ class SeqLanguageModelingTask(FairseqTask):
         )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths):
+        sys.exit()
         return LanguagePairDataset(src_tokens, src_lengths, self.source_dictionary)
 
     def max_positions(self):

@@ -135,10 +135,12 @@ class SingleHeadAttention(nn.Module):
                     -math.inf,
                 )
                 attn_weights = attn_weights.view(size, tgt_len, src_len)
-        attn_weights = F.softmax(attn_weights, dim=-1)
-        attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
+        
+        attn_logits = attn_weights
+        attn_cxt_weights = F.softmax(attn_weights, dim=-1)
+        attn_cxt_weights = F.dropout(attn_cxt_weights, p=self.dropout, training=self.training)
 
-        attn = torch.bmm(attn_weights, v)
+        attn = torch.bmm(attn_cxt_weights, v)
         if self.downsample:
             attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, self.head_dim)
         else:
@@ -146,7 +148,7 @@ class SingleHeadAttention(nn.Module):
 
         attn = self.out_proj(attn)
 
-        return attn, attn_weights
+        return attn, attn_cxt_weights, attn_logits
 
 
 class DownsampledMultiHeadAttention(nn.ModuleList):
@@ -165,7 +167,9 @@ class DownsampledMultiHeadAttention(nn.ModuleList):
         self.gated = gated
         self.project_input = project_input
         assert self.head_dim * num_heads == embed_dim
-
+        
+        print('downsample: ', self.downsample)
+        #sys.exit()
         if self.downsample:
             attention_heads = []
             for index in range(self.num_heads):
@@ -203,28 +207,34 @@ class DownsampledMultiHeadAttention(nn.ModuleList):
 
         attn = []
         attn_weights = []
+        attn_logits = []
         if self.downsample:
             for attention_head_number in range(self.num_heads):
                 # call the forward of each attention head
-                _attn, _attn_weight = self[attention_head_number](
+                _attn, _attn_weight, _attn_logits = self[attention_head_number](
                     query, key, value, mask_future_timesteps, key_padding_mask, use_scalar_bias,
                 )
                 attn.append(_attn)
                 attn_weights.append(_attn_weight)
+                attn_logits.append(_attn_logits)
             full_attn = torch.cat(attn, dim=2)
             full_attn = self.out_proj(full_attn)
-            return full_attn, attn_weights[0].clone()
+            return full_attn, attn_weights[0].clone(), attn_logits[0].clone()
         else:
-            _attn, _attn_weight = self.attention_module(
+            _attn, _attn_weight, _attn_logits = self.attention_module(
                 query, key, value, mask_future_timesteps, key_padding_mask, use_scalar_bias,
             )
             attn.append(_attn)
             attn_weights.append(_attn_weight)
+            attn_logits.append(_attn_logits)
             full_attn = torch.cat(attn, dim=2)
             full_attn_weights = torch.cat(attn_weights)
+            full_attn_logits = torch.cat(attn_logits)
             full_attn_weights = full_attn_weights.view(bsz, self.num_heads, tgt_size, src_len)
+            full_attn_logits = full_attn_logits.view(bsz, self.num_heads, tgt_size, src_len)
             full_attn_weights = full_attn_weights.sum(dim=1) / self.num_heads
-            return full_attn, full_attn_weights
+            full_attn_logits = full_attn_logits.sum(dim=1) / self.num_heads 
+            return full_attn, full_attn_weights, full_attn_logits
 
 
 class Downsample(nn.Module):
