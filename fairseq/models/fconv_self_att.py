@@ -435,7 +435,7 @@ class FConvDecoder(FairseqDecoder):
             # attention
             if attention is not None:
                 r = x
-                print('r: ', x.size())
+                #print('r: ', x.size())
 
                 x, attn_scores, attn_logits = attention(attproj(x) + target_embedding, encoder_a, encoder_b)
                 x = x + r
@@ -450,7 +450,7 @@ class FConvDecoder(FairseqDecoder):
                         avg_attn_scores = attn_scores
                     else:
                         avg_attn_scores.add_(attn_scores)
-                print('self.copy_net: ', self.copy_net)
+                #print('self.copy_net: ', self.copy_net)
                 #sys.exit()
             if selfattention is not None:
                 x = selfattention(x)
@@ -462,7 +462,7 @@ class FConvDecoder(FairseqDecoder):
 
         # project back to size of vocabulary
         x = self.fc2(x)
-        print('fc2: ', x.size())
+        #print('fc2: ', x.size())
         #sys.exit()
         x = F.dropout(x, p=self.dropout, training=self.training)
         if not self.pretrained:
@@ -472,6 +472,7 @@ class FConvDecoder(FairseqDecoder):
         if self.copy_net:
             assert src_tokens is not None, 'src_tokens is None'
             x = self.merge_copy_logits(x, avg_attn_logits, src_tokens)
+            print('x: ', x.size())
     
         # fusion gating
         if self.pretrained:
@@ -502,6 +503,7 @@ class FConvDecoder(FairseqDecoder):
         expanded_src_map = src_map.unsqueeze(1).expand(batch_size, max_length, src_len).contiguous().view(batch_size * max_length, -1)  # (batch_size, src_len) -> (batch_size * trg_len, src_len)
         # flattened_decoder_logits.scatter_add_(dim=1, index=expanded_src_map, src=copy_logits.view(batch_size * max_length, -1))
         flattened_decoder_logits = flattened_decoder_logits.scatter_add_(1, expanded_src_map, copy_logits.view(batch_size * max_length, -1))
+        flattened_decoder_logits = flattened_decoder_logits.view(max_length, batch_size, -1)
         return flattened_decoder_logits
 
     def max_positions(self):
