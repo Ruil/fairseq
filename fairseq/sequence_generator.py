@@ -156,6 +156,10 @@ class SequenceGenerator(object):
         tokens[:, 0] = bos_token or self.eos
         attn, attn_buf = None, None
         nonpad_idxs = None
+        
+        #print('tokens: ', tokens.size())
+        #print('src_tokens: ', src_tokens.size())   
+        
 
         # list of completed sentences
         finalized = [[] for i in range(bsz)]
@@ -303,8 +307,11 @@ class SequenceGenerator(object):
                     reorder_state.view(-1, beam_size).add_(corr.unsqueeze(-1) * beam_size)
                 model.reorder_incremental_state(reorder_state)
                 model.reorder_encoder_out(encoder_outs, reorder_state)
-
-            lprobs, avg_attn_scores = model.forward_decoder(tokens[:, :step + 1], encoder_outs)
+            
+            #print('tokens[:, :step + 1]: ', tokens[:, :step + 1].size())
+            #print('tokens[:, :step + 1]: ', tokens[:, :step + 1])
+            #print('tokens: ', tokens.size())
+            lprobs, avg_attn_scores = model.forward_decoder(tokens[:, :step + 1], encoder_outs, src_tokens=src_tokens)
 
             lprobs[:, self.pad] = -math.inf  # never select pad
             lprobs[:, self.unk] -= self.unk_penalty  # apply unk penalty
@@ -442,7 +449,15 @@ class SequenceGenerator(object):
 
                 scores = scores.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
                 scores_buf.resize_as_(scores)
+                #print('token b: ', tokens.size())
+                #print(tokens)
                 tokens = tokens.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
+                src_tokens = src_tokens.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
+                print('batch idxs: ', batch_idxs.size())
+                print('batch idxs: ', batch_idxs)
+                #print('token a: ', tokens.size())
+                #print(tokens)
+                sys.exit()
                 tokens_buf.resize_as_(tokens)
                 if attn is not None:
                     attn = attn.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, attn.size(1), -1)
@@ -509,6 +524,8 @@ class SequenceGenerator(object):
                 )
 
             # swap buffers
+            #print('tokens c: ', tokens.size())
+            #print('tokens_buf: ', tokens_buf.size()) 
             tokens, tokens_buf = tokens_buf, tokens
             scores, scores_buf = scores_buf, scores
             if attn is not None:
@@ -547,7 +564,7 @@ class EnsembleModel(torch.nn.Module):
         return [model.encoder(**encoder_input) for model in self.models]
 
     @torch.no_grad()
-    def forward_decoder(self, tokens, encoder_outs):
+    def forward_decoder(self, tokens, encoder_outs, src_tokens=None):
         if len(self.models) == 1:
             return self._decode_one(
                 tokens,
@@ -555,12 +572,13 @@ class EnsembleModel(torch.nn.Module):
                 encoder_outs[0] if self.has_encoder() else None,
                 self.incremental_states,
                 log_probs=True,
+                src_tokens=src_tokens,
             )
 
         log_probs = []
         avg_attn = None
         for model, encoder_out in zip(self.models, encoder_outs):
-            probs, attn = self._decode_one(tokens, model, encoder_out, self.incremental_states, log_probs=True)
+            probs, attn = self._decode_one(tokens, model, encoder_out, self.incremental_states, log_probs=True, src_tokens=src_tokens)
             log_probs.append(probs)
             if attn is not None:
                 if avg_attn is None:
@@ -572,11 +590,15 @@ class EnsembleModel(torch.nn.Module):
             avg_attn.div_(len(self.models))
         return avg_probs, avg_attn
 
-    def _decode_one(self, tokens, model, encoder_out, incremental_states, log_probs):
+    def _decode_one(self, tokens, model, encoder_out, incremental_states, log_probs, src_tokens=None):
         if self.incremental_states is not None:
             decoder_out = list(model.decoder(tokens, encoder_out, incremental_state=self.incremental_states[model]))
         else:
-            decoder_out = list(model.decoder(tokens, encoder_out))
+            decoder_out = list(model.decoder(tokens, encoder_out, src_tokens))
+        #print(decoder_out[0].size())
+        
+        #print(len(decoder_out))
+        #sys.exit()
         decoder_out[0] = decoder_out[0][:, -1:, :]
         attn = decoder_out[1]
         if type(attn) is dict:

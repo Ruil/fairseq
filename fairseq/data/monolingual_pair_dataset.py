@@ -94,7 +94,7 @@ class MonoLingualPairDataset(FairseqDataset):
         self, dataset, src_sizes, dictionary, tgt_sizes=None, output_dictionary=None, add_eos_for_other_targets=None,
         left_pad_source=True, left_pad_target=False,
         max_source_positions=1024, max_target_positions=1024,
-        shuffle=True, targets=None, input_feeding=True, remove_eos_from_source=False, append_eos_to_target=False,
+        shuffle=True, targets=None, input_feeding=True, remove_eos_from_source=False, append_eos_to_target=False, keyphrase=False
     ):
         self.dataset = dataset
         self.src_sizes = src_sizes
@@ -110,7 +110,10 @@ class MonoLingualPairDataset(FairseqDataset):
         self.input_feeding = input_feeding
         self.remove_eos_from_source = remove_eos_from_source
         self.append_eos_to_target = append_eos_to_target
-
+        self.keyphrase = keyphrase
+         
+        print('keyphrase: ', keyphrase)
+        #sys.exit()
         assert targets is None or all(t in {'self', 'future', 'past'} for t in targets), \
             "targets must be none or one of 'self', 'future', 'past'"
         if targets is not None and len(targets) == 0:
@@ -130,9 +133,11 @@ class MonoLingualPairDataset(FairseqDataset):
             source = self.dataset[index]
             target = None
 
-        #print('id: ', index)
-        #print('source: ', source)
-        #print('target: ', target)
+        print('ds1: id: ', index)
+        print('ds1: source: ', source)
+        print('ds1: target: ', target)
+        #print('self.append_eos_to_target: ', self.append_eos_to_target)
+        #print('self.remove_eos_from_source: ', self.remove_eos_from_source)
         #sys.exit()
         if self.append_eos_to_target:
             eos = self.tgt_dict.eos() if self.tgt_dict else self.src_dict.eos()
@@ -144,6 +149,7 @@ class MonoLingualPairDataset(FairseqDataset):
             if source[-1] == eos:
                 source = source[:-1]
 
+        
         return {'id': index, 'source': source, 'target': target}
 
     def __len__(self):
@@ -152,7 +158,9 @@ class MonoLingualPairDataset(FairseqDataset):
     def _make_source_target(self, source, future_target, past_target):
         if self.targets is not None:
             target = []
-
+            
+            #print('self.add_eos_for_other_targets: ', self.add_eos_for_other_targets)
+            #sys.exit()
             if self.add_eos_for_other_targets and (('self' in self.targets) or ('past' in self.targets)) \
                     and source[-1] != self.src_dict.eos():
                 # append eos at the end of source
@@ -224,8 +232,11 @@ class MonoLingualPairDataset(FairseqDataset):
                   target sentence of shape `(bsz, tgt_len)`. Padding will appear
                   on the left if *left_pad_target* is ``True``.
         """
+        idx = self.src_dict.eos() if not self.keyphrase else self.src_dict.keyphrase_eos_index
+        #print(idx)
+        #sys.exit()
         return collate(
-            samples, pad_idx=self.src_dict.pad(), eos_idx=self.src_dict.eos(),
+            samples, pad_idx=self.src_dict.pad(), eos_idx=idx,
             left_pad_source=self.left_pad_source, left_pad_target=self.left_pad_target,
             input_feeding=self.input_feeding,
         )
@@ -239,7 +250,7 @@ class MonoLingualPairDataset(FairseqDataset):
         )
         print('src_len: ', src_len)
         print('tgt_len: ', tgt_len)
-        bsz = 1 #max(num_tokens // max(src_len, tgt_len), 1)
+        bsz = max(num_tokens // max(src_len, tgt_len), 1)
         print('bsz: ', bsz)
         #sys.exit()
         return self.collater([

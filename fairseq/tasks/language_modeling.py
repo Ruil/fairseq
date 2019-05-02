@@ -23,6 +23,7 @@ from fairseq.data import (
     TransformEosDataset,
     TruncatedDictionary,
     SentenceBlockDataset,
+    KeyphraseBlockDataset,
 )
 
 from . import FairseqTask, register_task
@@ -85,6 +86,8 @@ class LanguageModelingTask(FairseqTask):
                             help='include past target')
         parser.add_argument('--sentence', default=False, action='store_true',
                             help='')
+        parser.add_argument('--keyphrase', default=False, action='store_true',
+                            help='')
 
         # fmt: on
 
@@ -97,7 +100,9 @@ class LanguageModelingTask(FairseqTask):
             targets = ['future']
         self.targets = targets
         self.sentence = args.sentence
+        self.keyphrase = args.keyphrase
         print('self.sentence: ', self.sentence)
+        print('self.keyphrase: ', self.keyphrase)
 
     @classmethod
     def setup_task(cls, args, **kwargs):
@@ -165,6 +170,9 @@ class LanguageModelingTask(FairseqTask):
                 if self.args.lazy_load:
                     print('load IndexedDataset')
                     ds = IndexedDataset(path, fix_lua_indexing=True)
+                elif self.keyphrase:
+                    print('load IndexedCacheKeyphraseDataset')
+                    ds = IndexedCachedKeyphraseDataset(path, fix_lua_indexing=True)
                 elif self.sentence:
                     print('load IndexedCacheSentenceDataset')
                     ds = IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
@@ -182,17 +190,30 @@ class LanguageModelingTask(FairseqTask):
             assert len(ds.sizes) == ds.dim_offsets[-1]
             #sys.exit()
             
-            
-            loaded_datasets.append(
-                TokenBlockDataset(
-                    ds, ds.sizes, self.args.tokens_per_sample,
-                    pad=self.dictionary.pad(), eos=self.dictionary.eos(),
-                    break_mode=self.args.sample_break_mode, include_targets=True,
-                ) if not self.sentence else SentenceBlockDataset(
-                    ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
-                    mask=self.dictionary.mask(),
+            if not self.sentence and not self.keyphrase:
+                loaded_datasets.append(
+                    TokenBlockDataset(
+                        ds, ds.sizes, self.args.tokens_per_sample,
+                        pad=self.dictionary.pad(), eos=self.dictionary.eos(),
+                        break_mode=self.args.sample_break_mode, include_targets=True,
+                    )
                 )
-            )
+             elif self.keyphrase:
+                loaded_datasets.append(
+                    KeyphraseBlockDataset(
+                        ds, ds.sizes, self.args.tokens_per_sample,
+                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos(),
+                        break_mode=self.args.sample_break_mode, include_targets=True,
+                    )
+                )
+             else:
+                loaded_datasets.append(
+                    SentenceBlockDataset(
+                        ds, ds.sizes, ds.dim_offsets,
+                        pad=self.dictionary.pad(), eos=self.dictionary.eos(),
+                        mask=self.dictionary.mask(),
+                    )
+                )
 
             print('| {} {} {} examples'.format(self.args.data, split_k, len(loaded_datasets[-1])))
 

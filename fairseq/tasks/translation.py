@@ -19,6 +19,7 @@ from fairseq.data import (
     IndexedRawTextDataset,
     LanguagePairDataset,
     SentenceBlockDataset,
+    KeyphraseBlockDataset,
 )
 
 from . import FairseqTask, register_task
@@ -71,6 +72,8 @@ class TranslationTask(FairseqTask):
                             help='amount to upsample primary dataset')
         parser.add_argument('--sentence', default=False, action='store_true',
                             help='')
+        parser.add_argument('--keyphrase', default=False, action='store_true',
+                            help='')
         # fmt: on
 
     @staticmethod
@@ -96,7 +99,9 @@ class TranslationTask(FairseqTask):
         self.src_dict = src_dict
         self.tgt_dict = tgt_dict
         self.sentence = args.sentence
+        self.keyphrase = args.keyphrase
         print('self.sentence: ', self.sentence)
+        print('self.keyphrase: ', self.keyphrase)
 
     @classmethod
     def setup_task(cls, args, **kwargs):
@@ -146,6 +151,8 @@ class TranslationTask(FairseqTask):
             elif IndexedDataset.exists(path):
                 if self.args.lazy_load:
                     return IndexedDataset(path, fix_lua_indexing=True)
+                elif self.keyphrase:
+                    return IndexedCachedKeyphraseDataset(path, fix_lua_indexing=True)
                 elif self.sentence:
                     return IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
                 else:

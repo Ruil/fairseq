@@ -58,7 +58,8 @@ def main(args):
             threshold=args.thresholdsrc if src else args.thresholdtgt,
             nwords=args.nwordssrc if src else args.nwordstgt,
             padding_factor=args.padding_factor,
-            sentence_tokenizer=args.sentence_tokenizer
+            sentence_tokenizer=args.sentence_tokenizer,
+            keyphrase=args.keyphrase,
         )
 
     if not args.srcdict and os.path.exists(dict_path(args.source_lang)):
@@ -146,11 +147,12 @@ def main(args):
             dataset_dest_file(args, output_prefix, lang, "bin")
         )
         print('sentence_tokenizer: ', args.sentence_tokenizer)
+        print('keyphrase: ', args.keyphrase)
         #sys.exit()
         merge_result(
             Binarizer.binarize(
                 input_file, vocab, lambda t: ds.add_item(t),
-                offset=0, end=offsets[1], sentence_tokenizer=args.sentence_tokenizer
+                offset=0, end=offsets[1], sentence_tokenizer=args.sentence_tokenizer, keyphrase=args.keyphrase
             )
         )
         #sys.exit()

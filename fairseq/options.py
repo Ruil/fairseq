@@ -210,9 +210,11 @@ def add_preprocess_args(parser):
     group.add_argument("--workers", metavar="N", default=1, type=int,
                        help="number of parallel workers")
     group.add_argument("--sentence-tokenizer", default=False, action='store_true',
-                       help="number of parallel workers")
+                       help="parse sentence")
     group.add_argument("--copy-net", default=False, action='store_true',
-                       help="number of parallel workers")
+                       help="")
+    group.add_argument("--keyphrase", default=False, action='store_true',
+                       help="keyphrase")
     # fmt: on
     return parser
 
@@ -230,6 +232,7 @@ def add_dataset_args(parser, train=False, gen=False):
                        help='maximum number of sentences in a batch')
     group.add_argument('--required-batch-size-multiple', default=8, type=int, metavar='N',
                        help='batch size will be a multiplier of this value')
+
     if train:
         group.add_argument('--train-subset', default='train', metavar='SPLIT',
                            choices=['train', 'valid', 'test'],

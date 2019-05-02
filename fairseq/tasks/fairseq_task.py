@@ -36,7 +36,7 @@ class FairseqTask(object):
         return Dictionary.load(filename)
 
     @classmethod
-    def build_dictionary(cls, filenames, workers=1, threshold=-1, nwords=-1, padding_factor=8, sentence_tokenizer=False):
+    def build_dictionary(cls, filenames, workers=1, threshold=-1, nwords=-1, padding_factor=8, sentence_tokenizer=False, keyphrase=False):
         """Build the dictionary
 
         Args:
@@ -49,9 +49,9 @@ class FairseqTask(object):
                 multiple of 8, which is important on some hardware (e.g., Nvidia
                 Tensor Cores).
         """
-        d = Dictionary(sentence_tokenizer=sentence_tokenizer)
+        d = Dictionary(sentence_tokenizer=sentence_tokenizer, keyphrase=keyphrase)
         for filename in filenames:
-            Dictionary.add_file_to_dictionary(filename, d, tokenizer.tokenize_line, workers)
+            Dictionary.add_file_to_dictionary(filename, d, tokenizer.tokenize_line, workers, d.eos_word if not keyphrase else d.keyphrase_eos)
         d.finalize(threshold=threshold, nwords=nwords, padding_factor=padding_factor)
         return d
 

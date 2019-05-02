@@ -19,6 +19,7 @@ from fairseq.data import (
     IndexedRawTextDataset,
     LanguagePairDataset,
     SentenceBlockDataset,
+    KeyphraseBlockDataset,
     TruncatedDictionary,
     MonoLingualPairDataset,
 )
@@ -69,6 +70,8 @@ class SeqLanguageModelingTask(FairseqTask):
                             help='amount to upsample primary dataset')
         parser.add_argument('--sentence', default=False, action='store_true',
                             help='')
+        parser.add_argument('--keyphrase', default=False, action='store_true',
+                            help='')
         parser.add_argument('--output-dictionary-size', default=-1, type=int,
                             help='limit the size of output dictionary')
         parser.add_argument('--self-target', action='store_true',
@@ -111,7 +114,9 @@ class SeqLanguageModelingTask(FairseqTask):
 
         self.sentence = args.sentence
         print('self.sentence: ', self.sentence)
-
+        self.keyphrase = args.keyphrase
+        print('self.keyphrase: ', self.keyphrase)
+        #sys.exit()
         if targets is None:
             targets = ['future']
         self.targets = targets
@@ -136,7 +141,7 @@ class SeqLanguageModelingTask(FairseqTask):
             #sys.exit()
             args.data = args.data[0]
             path = os.path.join(args.data, 'dict.txt')
-            dictionary = Dictionary.load(path)
+            dictionary = Dictionary.load(path, keyphrase=args.keyphrase)
             print('| dictionary: {} types'.format(len(dictionary)))
             output_dictionary = dictionary
             if args.output_dictionary_size >= 0:
@@ -190,6 +195,9 @@ class SeqLanguageModelingTask(FairseqTask):
                 elif self.sentence:
                     print('load IndexedCacheSentenceDataset')
                     ds = IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
+                elif self.keyphrase:
+                    print('load IndexedCacheKeyphraseDataset')
+                    ds = IndexedCachedKeyphraseDataset(path, fix_lua_indexing=True)
                 else:
                     print('load IndexedCacheDataset')
                     ds = IndexedCachedDataset(path, fix_lua_indexing=True)
@@ -199,13 +207,21 @@ class SeqLanguageModelingTask(FairseqTask):
                 else:
                     raise FileNotFoundError('Dataset not found: {} ({})'.format(split, self.args.data))
 
-            loaded_datasets.append(
-                SentenceBlockDataset(
-                    ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
-                    mask=self.dictionary.mask(),
+            if self.keyphrase:
+                loaded_datasets.append(
+                    KeyphraseBlockDataset(
+                        ds, ds.sizes, self.args.tokens_per_sample,
+                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos(),
+                        break_mode=self.args.sample_break_mode, include_targets=True,
+                    )
                 )
-
-            )
+            else:
+                loaded_datasets.append(
+                    SentenceBlockDataset(
+                        ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
+                        mask=self.dictionary.mask(),
+                    )
+                )
 
             print('| {} {} {} examples'.format(self.args.data, split_k, len(loaded_datasets[-1])))
 
@@ -214,7 +230,8 @@ class SeqLanguageModelingTask(FairseqTask):
 
         if len(loaded_datasets) == 1:
             dataset = loaded_datasets[0]
-            #print('sizes 1: ', sizes)
+            print('sizes 1: ', len(dataset))
+            #sys.exit()
         else:
             sys.exit()
             dataset = ConcatDataset(loaded_datasets)
@@ -233,7 +250,8 @@ class SeqLanguageModelingTask(FairseqTask):
             left_pad_target=self.args.left_pad_target,
             max_source_positions=self.args.max_source_positions,
             max_target_positions=self.args.max_target_positions,
-            targets=self.targets
+            targets=self.targets,
+            keyphrase=self.keyphrase,
         )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths):

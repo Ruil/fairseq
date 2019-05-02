@@ -200,7 +200,7 @@ class FConvEncoder(FairseqEncoder):
 
     def forward(self, src_tokens, src_lengths):
         # embed tokens and positions
-        #print('src_tokens: ', src_tokens)
+        print('src_tokens: ', src_tokens)
         #sys.exit()
         #print('src_lengths: ', src_lengths)
         x = self.embed_tokens(src_tokens) + self.embed_positions(src_tokens)
@@ -393,7 +393,7 @@ class FConvDecoder(FairseqDecoder):
             self.pretrained_decoder.fc2.register_forward_hook(save_output())
 
     def forward(self, prev_output_tokens, encoder_out_dict, src_tokens=None):
-        #print('prev: ', prev_output_tokens)
+        print('prev: ', prev_output_tokens)
         encoder_out = encoder_out_dict['encoder']['encoder_out']
         #print('en_out: {0}, {1}', len(encoder_out), encoder_out[0].size(), encoder_out[1].size())
         #print('en_out 1: ', encoder_out[0])
@@ -459,7 +459,7 @@ class FConvDecoder(FairseqDecoder):
 
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
-
+        #print('x: ', x.size())
         # project back to size of vocabulary
         x = self.fc2(x)
         #print('fc2: ', x.size())
@@ -467,12 +467,12 @@ class FConvDecoder(FairseqDecoder):
         x = F.dropout(x, p=self.dropout, training=self.training)
         if not self.pretrained:
             x = self.fc3(x)
-        print('fc3: ', x.size())
+        #print('fc3: ', x.size())
       
         if self.copy_net:
             assert src_tokens is not None, 'src_tokens is None'
             x = self.merge_copy_logits(x, avg_attn_logits, src_tokens)
-            print('x: ', x.size())
+            #print('x final: ', x.size())
         #sys.exit()
     
         # fusion gating
@@ -496,10 +496,12 @@ class FConvDecoder(FairseqDecoder):
 
         # flatten and extend size of decoder_probs from (vocab_size) to (vocab_size+max_oov_number)
         flattened_decoder_logits = decoder_logits.view(batch_size * max_length, -1)
-        print('flattened_decoder_logits: ', flattened_decoder_logits.size())
-        print('decoder_logits: ', decoder_logits.size())
+        #print('flattened_decoder_logits: ', flattened_decoder_logits.size())
+        #print('decoder_logits: ', decoder_logits.size())
         #sys.exit() 
-                
+        #print('expanded_src_map: ', expanded_src_map.size())
+        #print('copy_logits: ', copy_logits.size())
+        #print('src_map: ', src_map.size())        
         # add probs of copied words by scatter_add_(dim, index, src), index should be in the same shape with src. decoder_probs=(batch_size * trg_len, vocab_size+max_oov_number), copy_weights=(batch_size, trg_len, src_len)
         expanded_src_map = src_map.unsqueeze(1).expand(batch_size, max_length, src_len).contiguous().view(batch_size * max_length, -1)  # (batch_size, src_len) -> (batch_size * trg_len, src_len)
         # flattened_decoder_logits.scatter_add_(dim=1, index=expanded_src_map, src=copy_logits.view(batch_size * max_length, -1))

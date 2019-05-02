@@ -19,8 +19,8 @@ from fairseq.data import data_utils
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', sentence_tokenizer=False, copy_net=False):
-        self.unk_word, self.pad_word, self.eos_word, self.mask_word = unk, pad, eos, mask
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', keyphrase_eos='</ks>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
+        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos = unk, pad, eos, mask, keyphrase_eos
         self.symbols = []
         self.count = []
         self.indices = {}
@@ -30,11 +30,14 @@ class Dictionary(object):
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
         self.mask_index = self.add_symbol(mask)
+        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
+        self.keyphrase = keyphrase
         self.copy_net = copy_net
         self.meta_keys = ['sentence_tokenizer']
         self.meta_vals = [self.sentence_tokenizer]
+        self.stopword_indices = set([])
 
     def __eq__(self, other):
         return self.indices == other.indices
@@ -68,7 +71,7 @@ class Dictionary(object):
             else:
                 return self[i]
 
-        sent = ' '.join(token_string(i) for i in tensor if i != self.eos())
+        sent = ' '.join(token_string(i) for i in tensor if i != self.eos() and i != self.keyphrase_eos())
         return data_utils.process_bpe_symbol(sent, bpe_symbol)
 
     def unk_string(self, escape=False):
@@ -90,6 +93,20 @@ class Dictionary(object):
             self.symbols.append(word)
             self.count.append(n)
             return idx
+
+    def build_stopwords_indices(self, stopwords):
+        for stopword in stopwords:
+           if stopword in self.indices:
+               self.stopword_indices.add(stopword)
+        
+        self.stopword_indices.add(self.pad_index)
+        self.stopword_indices.add(self.eos_index)
+        self.stopword_indices.add(self.unk_index)
+        self.stopword_indices.add(self.keyphrase_eos_index)
+        print('stopword len: ', len(self.stopword_indices))
+        print('stopwords: ', len(stopwords))
+        
+        #sys.exit()
 
     def update(self, new_dict):
         """Updates counts from new dictionary."""
@@ -157,6 +174,10 @@ class Dictionary(object):
         """Helper to get index of end-of-sentence symbol"""
         return self.eos_index
 
+    def keyphrase_eos(self):
+        """Helper to get index of end-of-sentence symbol"""
+        return self.keyphrase_eos_index
+
     def unk(self):
         """Helper to get index of unk symbol"""
         return self.unk_index
@@ -164,8 +185,20 @@ class Dictionary(object):
     def mask(self):
         return self.mask_index
 
+    def load_stopwords(self, data_path):
+        print(self.keyphrase)
+        #sys.exit()
+        if not self.keyphrase:
+           return
+
+        assert os.path.exists(data_path)
+        with open(data_path) as f:
+            lines = f.readlines()
+            stopwords = [line.rstrip() for line in lines]
+        return stopwords
+
     @classmethod
-    def load(cls, f, ignore_utf_errors=False):
+    def load(cls, f, ignore_utf_errors=False, keyphrase=False):
         """Loads the dictionary from a text file with the format:
 
         ```
@@ -178,17 +211,17 @@ class Dictionary(object):
             try:
                 if not ignore_utf_errors:
                     with open(f, 'r', encoding='utf-8') as fd:
-                        return cls.load(fd)
+                        return cls.load(fd, keyphrase=keyphrase)
                 else:
                     with open(f, 'r', encoding='utf-8', errors='ignore') as fd:
-                        return cls.load(fd)
+                        return cls.load(fd, keyphrase=keyphrase)
             except FileNotFoundError as fnfe:
                 raise fnfe
             except UnicodeError:
                 raise Exception("Incorrect encoding detected in {}, please "
                                 "rebuild the dataset".format(f))
 
-        d = cls()
+        d = cls(keyphrase=keyphrase)
         lines = f.readlines()
         indices_start_line = d._load_meta(lines)
         for line in lines[indices_start_line:]:
@@ -200,6 +233,10 @@ class Dictionary(object):
             d.indices[word] = len(d.symbols)
             d.symbols.append(word)
             d.count.append(count)
+    
+        if keyphrase:
+            stopwords = d.load_stopwords('fairseq/data/english-stop-words-large.txt')
+            d.build_stopwords_indices(stopwords)    
         return d
 
     def _save(self, f, kv_iterator):
@@ -231,7 +268,7 @@ class Dictionary(object):
 
     def dummy_sentence(self, length):
         t = torch.Tensor(length).uniform_(self.nspecial + 1, len(self)).long()
-        t[-1] = self.eos()
+        t[-1] = self.eos() if not self.keyphrase else self.keyphrase_eos_index
         return t
 
     def sentence_copy_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
@@ -270,8 +307,8 @@ class Dictionary(object):
                 copy_ids[j] = copy_idx
 
             if append_eos:
-                ids[nwords] = self.eos_index
-                copy_ids[nwords] = self.eos_index
+                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+                copy_ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
 
             sentence_ids.append(ids)
             sentence_copy_ids.append(copy_ids)
@@ -306,13 +343,18 @@ class Dictionary(object):
                 if consumer is not None:
                     consumer(word, idx)
                 ids[j] = idx
+            #print('append_eos: ', append_eos)
+            #print('self.keyphrase_eos_index: ', self.keyphrase_eos_index)
+            #sys.exit()
             if append_eos:
-                ids[nwords] = self.eos_index
+                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+            #print('ids: ', ids)
+            #sys.exit()
             sentence_ids.append(ids)
         return sentence_ids
 
     def encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
-                    consumer=None, append_eos=True, reverse_order=False):
+                    consumer=None, append_eos=True, keyphrase=False, reverse_order=False):
         if self.sentence_tokenizer:
             return self.sentence_encode_line(line, line_tokenizer, add_if_not_exist,
                     consumer, append_eos, reverse_order)
@@ -332,7 +374,7 @@ class Dictionary(object):
                 consumer(word, idx)
             ids[i] = idx
         if append_eos:
-            ids[nwords] = self.eos_index
+            ids[nwords] = self.eos_index if not keyphrase else self.keyphrase_eos_index
         return ids
 
     @staticmethod
@@ -357,7 +399,7 @@ class Dictionary(object):
         return counter
 
     @staticmethod
-    def add_file_to_dictionary(filename, dict, tokenize, num_workers):
+    def add_file_to_dictionary(filename, dict, tokenize, num_workers, eos_word):
         def merge_result(counter):
             for w, c in sorted(counter.items()):
                 dict.add_symbol(w, c)
@@ -368,14 +410,14 @@ class Dictionary(object):
             for worker_id in range(num_workers):
                 results.append(pool.apply_async(
                     Dictionary._add_file_to_dictionary_single_worker,
-                    (filename, tokenize, dict.eos_word, worker_id, num_workers)
+                    (filename, tokenize, eos_word, worker_id, num_workers)
                 ))
             pool.close()
             pool.join()
             for r in results:
                 merge_result(r.get())
         else:
-            merge_result(Dictionary._add_file_to_dictionary_single_worker(filename, tokenize, dict.eos_word))
+            merge_result(Dictionary._add_file_to_dictionary_single_worker(filename, tokenize, eos_word))
 
 class TruncatedDictionary(object):
 
