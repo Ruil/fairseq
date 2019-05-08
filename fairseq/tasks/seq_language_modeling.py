@@ -13,6 +13,7 @@ from fairseq.data import (
     ConcatDataset,
     data_utils,
     Dictionary,
+    IndexedCachedKeyphraseDataset,
     IndexedCachedSentenceDataset,
     IndexedCachedDataset,
     IndexedDataset,
@@ -192,12 +193,12 @@ class SeqLanguageModelingTask(FairseqTask):
             elif not self.args.raw_text and IndexedDataset.exists(path):
                 if self.args.lazy_load:
                     ds = IndexedDataset(path, fix_lua_indexing=True)
-                elif self.sentence:
-                    print('load IndexedCacheSentenceDataset')
-                    ds = IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
                 elif self.keyphrase:
-                    print('load IndexedCacheKeyphraseDataset')
+                    print('load IndexedCacheSentenceDataset')
                     ds = IndexedCachedKeyphraseDataset(path, fix_lua_indexing=True)
+                elif self.sentence:
+                    print('load IndexedCacheKeyphraseDataset')
+                    ds = IndexedCachedSentenceDataset(path, fix_lua_indexing=True)
                 else:
                     print('load IndexedCacheDataset')
                     ds = IndexedCachedDataset(path, fix_lua_indexing=True)
@@ -210,9 +211,9 @@ class SeqLanguageModelingTask(FairseqTask):
             if self.keyphrase:
                 loaded_datasets.append(
                     KeyphraseBlockDataset(
-                        ds, ds.sizes, self.args.tokens_per_sample,
-                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos(),
-                        break_mode=self.args.sample_break_mode, include_targets=True,
+                        ds, ds.sizes, ds.dim_offsets, stopwords=self.dictionary.stopword_indices,
+                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos_index,
+                        mask=self.dictionary.mask(),
                     )
                 )
             else:

@@ -26,6 +26,8 @@ def collate_tokens(values, pad_idx, eos_idx, left_pad, move_eos_to_beginning=Fal
     res = values[0].new(len(values), size).fill_(pad_idx)
 
     def copy_tensor(src, dst):
+        #print('src: ', src)
+        #sys.exit()
         assert dst.numel() == src.numel()
         if move_eos_to_beginning:
             assert src[-1] == eos_idx

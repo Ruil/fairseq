@@ -97,7 +97,7 @@ class Dictionary(object):
     def build_stopwords_indices(self, stopwords):
         for stopword in stopwords:
            if stopword in self.indices:
-               self.stopword_indices.add(stopword)
+               self.stopword_indices.add(self.indices[stopword])
         
         self.stopword_indices.add(self.pad_index)
         self.stopword_indices.add(self.eos_index)

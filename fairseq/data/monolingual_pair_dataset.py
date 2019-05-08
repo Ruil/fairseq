@@ -14,6 +14,9 @@ def collate(
         return {}
 
     def merge(key, left_pad, move_eos_to_beginning=False):
+        print(eos_idx)
+        #sys.exit()
+        #print(samples)
         return data_utils.collate_tokens(
             [s[key] for s in samples],
             pad_idx, eos_idx, left_pad, move_eos_to_beginning,

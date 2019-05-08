@@ -199,7 +199,26 @@ class IndexedCachedSentenceDataset(IndexedCachedDataset):
         #sys.exit()
         return item
 
+class IndexedCachedKeyphraseDataset(IndexedCachedDataset):
 
+    def __init__(self, path, fix_lua_indexing=False):
+        super().__init__(path, fix_lua_indexing=fix_lua_indexing)
+
+    def __getitem__(self, i):
+        self.check_index(i)
+        tensor_size = self.sizes[i]
+        #print('tensor_size: ', tensor_size)
+        #print('i: ', i)
+        #print(self.cache_index)
+        a = np.empty(tensor_size, dtype=self.dtype)
+        ptx = self.cache_index[i]
+        np.copyto(a, self.cache[ptx : ptx + a.size])
+        item = torch.from_numpy(a).long()
+        if self.fix_lua_indexing:
+            item -= 1  # subtract 1 for 0-based indexing
+        #print('item: ', item)
+        #sys.exit()
+        return item
 
 class IndexedRawTextDataset(torch.utils.data.Dataset):
     """Takes a text file as input and binarizes it in memory at instantiation.

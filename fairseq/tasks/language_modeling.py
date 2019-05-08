@@ -198,7 +198,7 @@ class LanguageModelingTask(FairseqTask):
                         break_mode=self.args.sample_break_mode, include_targets=True,
                     )
                 )
-             elif self.keyphrase:
+            elif self.keyphrase:
                 loaded_datasets.append(
                     KeyphraseBlockDataset(
                         ds, ds.sizes, self.args.tokens_per_sample,
@@ -206,7 +206,7 @@ class LanguageModelingTask(FairseqTask):
                         break_mode=self.args.sample_break_mode, include_targets=True,
                     )
                 )
-             else:
+            else:
                 loaded_datasets.append(
                     SentenceBlockDataset(
                         ds, ds.sizes, ds.dim_offsets,
