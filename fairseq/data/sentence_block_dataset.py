@@ -115,7 +115,7 @@ class SentenceBlockDataset(FairseqDataset):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]
         target_idx = start_ds_idx + start_offset
         target = torch.cat([self.dataset[target_idx]])
-        print('target: ', target)
+        #print('target: ', target)
         #sys.exit()
         before = torch.cat([
             self.dataset[idx] for idx in range(start_ds_idx,  target_idx)
