@@ -266,7 +266,7 @@ class KeyphraseBlockDataset(FairseqDataset):
         start_ds_idx, start_offset, end_ds_idx = self.block_to_dataset_index[index]
         target_idx = start_ds_idx + start_offset
         target_sent = torch.cat([self.dataset[target_idx]])
-        #print('target: ', target)
+        #print('target: ', target_sent)
         #print(self.stopwords)
         
         nonstopword_target = []
@@ -274,7 +274,10 @@ class KeyphraseBlockDataset(FairseqDataset):
             if item.item() not in self.stopwords:
                 nonstopword_target.append(item.item())
         if len(nonstopword_target) == 0:
-           return None
+           #print(target_sent)
+           nonstopword_target.append(target_sent[0].item()) 
+           #sys.exit()
+           #return None
 
         random.shuffle(nonstopword_target)
         tok_idx = random.randint(0, len(nonstopword_target)-1)
