@@ -200,7 +200,7 @@ class FConvEncoder(FairseqEncoder):
 
     def forward(self, src_tokens, src_lengths):
         # embed tokens and positions
-        print('src_tokens: ', src_tokens)
+        #print('src_tokens: ', src_tokens)
         #sys.exit()
         #print('src_lengths: ', src_lengths)
         x = self.embed_tokens(src_tokens) + self.embed_positions(src_tokens)
@@ -241,10 +241,10 @@ class FConvEncoder(FairseqEncoder):
         # T x B x C -> B x T x C
         x = x.transpose(1, 0)
        
-        print('x att: ', x.size())
+        #print('x att: ', x.size())
         # project back to size of embedding
         x = self.fc2(x)
-        print('x proj: ', x.size())
+        #print('x proj: ', x.size())
         #sys.exit()  
         if encoder_padding_mask is not None:
             encoder_padding_mask = encoder_padding_mask.t()  # -> B x T
@@ -255,7 +255,7 @@ class FConvEncoder(FairseqEncoder):
 
         # add output to input embedding for attention
         y = (x + input_embedding.transpose(0, 1)) * math.sqrt(0.5)
-        print('y: ', y.size())
+        #print('y: ', y.size())
         #sys.exit()
         return {
             'encoder_out': (x, y),
@@ -393,7 +393,7 @@ class FConvDecoder(FairseqDecoder):
             self.pretrained_decoder.fc2.register_forward_hook(save_output())
 
     def forward(self, prev_output_tokens, encoder_out_dict, src_tokens=None):
-        print('prev: ', prev_output_tokens)
+        #print('prev: ', prev_output_tokens)
         encoder_out = encoder_out_dict['encoder']['encoder_out']
         #print('en_out: {0}, {1}', len(encoder_out), encoder_out[0].size(), encoder_out[1].size())
         #print('en_out 1: ', encoder_out[0])

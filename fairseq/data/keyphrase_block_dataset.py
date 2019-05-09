@@ -259,7 +259,7 @@ class KeyphraseBlockDataset(FairseqDataset):
         #sys.exit() 
 
     def __getitem__(self, index):
-        print('index: ', index)
+        #print('index: ', index)
         #debug = False
         #if index == 7943:
         #    debug = True
@@ -279,7 +279,7 @@ class KeyphraseBlockDataset(FairseqDataset):
         random.shuffle(nonstopword_target)
         tok_idx = random.randint(0, len(nonstopword_target)-1)
         target = torch.tensor([nonstopword_target[tok_idx], target_sent[-1].item()])
-        print(target)
+        #print(target)
         #print(target.size())
         #sys.exit()
 
@@ -306,8 +306,8 @@ class KeyphraseBlockDataset(FairseqDataset):
         #print('source size: ', source.size())
         #print('target size: ', item.size())
         #print('total size: ', self.sizes[index])
-        print('item: ', item.size())
-        print('tgt_sizes: ', self.tgt_sizes[index])
+        #print('item: ', item.size())
+        #print('tgt_sizes: ', self.tgt_sizes[index])
         assert self.src_sizes[index] == source.size()
         assert self.tgt_sizes[index] == item.size()
         #sys.exit()

@@ -14,7 +14,7 @@ def collate(
         return {}
 
     def merge(key, left_pad, move_eos_to_beginning=False):
-        print(eos_idx)
+        #print(eos_idx)
         #sys.exit()
         #print(samples)
         return data_utils.collate_tokens(
@@ -136,9 +136,9 @@ class MonoLingualPairDataset(FairseqDataset):
             source = self.dataset[index]
             target = None
 
-        print('ds1: id: ', index)
-        print('ds1: source: ', source)
-        print('ds1: target: ', target)
+        #print('ds1: id: ', index)
+        #print('ds1: source: ', source)
+        #print('ds1: target: ', target)
         #print('self.append_eos_to_target: ', self.append_eos_to_target)
         #print('self.remove_eos_from_source: ', self.remove_eos_from_source)
         #sys.exit()
