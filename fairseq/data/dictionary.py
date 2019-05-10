@@ -30,7 +30,7 @@ class Dictionary(object):
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
         self.mask_index = self.add_symbol(mask)
-        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos_word)
+        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
         self.keyphrase = keyphrase
