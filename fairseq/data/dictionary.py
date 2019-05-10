@@ -20,7 +20,7 @@ from fairseq.data import data_utils
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
     def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', keyphrase_eos='</ks>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
-        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos = unk, pad, eos, mask, keyphrase_eos
+        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos_word = unk, pad, eos, mask, keyphrase_eos
         self.symbols = []
         self.count = []
         self.indices = {}
@@ -30,7 +30,7 @@ class Dictionary(object):
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
         self.mask_index = self.add_symbol(mask)
-        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos)
+        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos_word)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
         self.keyphrase = keyphrase
