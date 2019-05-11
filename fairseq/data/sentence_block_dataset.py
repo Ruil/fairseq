@@ -132,7 +132,7 @@ class SentenceBlockDataset(FairseqDataset):
             before, item.new([self.mask, self.mask, self.mask]), after
         ])      
         #print('idx: ', index)
-        print('target: ', target)
+        #print('target: ', target)
         #print('item: ', item)
         #print('source: ', source)
         #sys.exit()
