@@ -19,8 +19,8 @@ from fairseq.data import data_utils
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', keyphrase_eos='</ks>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
-        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos_word = unk, pad, eos, mask, keyphrase_eos
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', keyphrase_eos='</ks>', sos='<s>', keyphrase_sos='<ks>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
+        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos_word, self.sos_word, self.keyphrase_sos_word = unk, pad, eos, mask, keyphrase_eos, sos, keyphrase_sos
         self.symbols = []
         self.count = []
         self.indices = {}
@@ -28,9 +28,11 @@ class Dictionary(object):
         self.add_symbol('<Lua heritage>')
         self.pad_index = self.add_symbol(pad)
         self.eos_index = self.add_symbol(eos)
+        self.sos_index = self.add_symbol(sos)
         self.unk_index = self.add_symbol(unk)
         self.mask_index = self.add_symbol(mask)
         self.keyphrase_eos_index = self.add_symbol(keyphrase_eos)
+        self.keyphrase_sos_index = self.add_symbol(keyphrase_sos)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
         self.keyphrase = keyphrase
@@ -71,7 +73,7 @@ class Dictionary(object):
             else:
                 return self[i]
 
-        sent = ' '.join(token_string(i) for i in tensor if i != self.eos() and i != self.keyphrase_eos())
+        sent = ' '.join(token_string(i) for i in tensor if i != self.eos() and i != self.keyphrase_eos() and i != self.sos() and i != self.keyphrase_sos())
         return data_utils.process_bpe_symbol(sent, bpe_symbol)
 
     def unk_string(self, escape=False):
@@ -103,10 +105,10 @@ class Dictionary(object):
         self.stopword_indices.add(self.eos_index)
         self.stopword_indices.add(self.unk_index)
         self.stopword_indices.add(self.keyphrase_eos_index)
+        self.stopword_indices.add(self.sos_index)
+        self.stopword_indices.add(self.keyphrase_sos_index)
         print('stopword len: ', len(self.stopword_indices))
         print('stopwords: ', len(stopwords))
-        
-        #sys.exit()
 
     def update(self, new_dict):
         """Updates counts from new dictionary."""
@@ -174,9 +176,16 @@ class Dictionary(object):
         """Helper to get index of end-of-sentence symbol"""
         return self.eos_index
 
+    def sos(self):
+        return self.sos_index
+
     def keyphrase_eos(self):
         """Helper to get index of end-of-sentence symbol"""
         return self.keyphrase_eos_index
+
+    def keyphrase_sos(self):
+        """Helper to get index of end-of-sentence symbol"""
+        return self.keyphrase_sos_index
 
     def unk(self):
         """Helper to get index of unk symbol"""
@@ -267,7 +276,8 @@ class Dictionary(object):
         self._save(f, zip(ex_keys + self.symbols[self.nspecial:], ex_vals + self.count[self.nspecial:]))
 
     def dummy_sentence(self, length):
-        t = torch.Tensor(length).uniform_(self.nspecial + 1, len(self)).long()
+        t = torch.Tensor(length).uniform_(self.nspecial + 2, len(self)).long()
+        t[0] = self.sos() if not self.keyphrase else self.keyphrase_sos_index
         t[-1] = self.eos() if not self.keyphrase else self.keyphrase_eos_index
         return t
 
@@ -285,8 +295,9 @@ class Dictionary(object):
             if reverse_order:
                 words = list(reversed(words))
             nwords = len(words)
-            ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
-            copy_ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+            ids = torch.IntTensor(nwords + 2 if append_eos else nwords)
+            copy_ids = torch.IntTensor(nwords + 2 if append_eos else nwords)
+
             for j, word in enumerate(words):
                 if add_if_not_exist:
                     idx = self.add_symbol(word)
@@ -294,7 +305,7 @@ class Dictionary(object):
                     idx = self.index(word)
                 if consumer is not None:
                     consumer(word, idx)
-                ids[j] = idx
+                ids[j + 1] = idx
                 
                 if word in self.indices:
                     copy_idx = self.indices[word]
@@ -304,12 +315,15 @@ class Dictionary(object):
                         oov_dict[w] = copy_idx
                     else:
                         copy_idx = self.unk_index
-                copy_ids[j] = copy_idx
+                copy_ids[j + 1] = copy_idx
 
-            if append_eos:
-                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
-                copy_ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+            if append_eos and append_sos:
+                ids[nwords + 1] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+                copy_ids[nwords + 1] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
 
+                ids[0] = self.sos_index if not self.keyphrase else self.keyphrase_sos_index
+                copy_ids[0] = self.sos_index if not self.keyphrase else self.keyphrase_sos_index
+            
             sentence_ids.append(ids)
             sentence_copy_ids.append(copy_ids)
         
@@ -322,8 +336,11 @@ class Dictionary(object):
         return sentence_ids
 
     def sentence_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
-                    consumer=None, append_eos=True, reverse_order=False):   
+                    consumer=None, append_eos=True, append_sos=True, reverse_order=False):   
         sentences = sentence_tokenize_line(line)
+        if len(sentences) <= 1:
+           return None
+
         sentence_ids = []
         for i, sentence in enumerate(sentences):
             if sentence.strip() == '':
@@ -333,7 +350,7 @@ class Dictionary(object):
             if reverse_order:
                 words = list(reversed(words))
             nwords = len(words)
-            ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+            ids = torch.IntTensor(nwords + 2 if append_eos else nwords)
 
             for j, word in enumerate(words):
                 if add_if_not_exist:
@@ -342,28 +359,31 @@ class Dictionary(object):
                     idx = self.index(word)
                 if consumer is not None:
                     consumer(word, idx)
-                ids[j] = idx
+                ids[j + 1] = idx
             #print('append_eos: ', append_eos)
             #print('self.keyphrase_eos_index: ', self.keyphrase_eos_index)
             #sys.exit()
-            if append_eos:
-                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+            #print('ids: ', ids)
+            if append_eos and append_sos:
+                ids[nwords + 1] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index 
+                ids[0] = self.sos_index if not self.keyphrase else self.keyphrase_sos_index
+            #print('append_eos: ', append_eos) 
             #print('ids: ', ids)
             #sys.exit()
             sentence_ids.append(ids)
         return sentence_ids
 
     def encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
-                    consumer=None, append_eos=True, keyphrase=False, reverse_order=False):
+                    consumer=None, append_eos=True, append_sos=True, keyphrase=False, reverse_order=False):
         if self.sentence_tokenizer:
             return self.sentence_encode_line(line, line_tokenizer, add_if_not_exist,
-                    consumer, append_eos, reverse_order)
+                    consumer, append_eos, append_sos, reverse_order)
 
         words = line_tokenizer(line)
         if reverse_order:
             words = list(reversed(words))
         nwords = len(words)
-        ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
+        ids = torch.IntTensor(nwords + 2 if append_eos else nwords)
 
         for i, word in enumerate(words):
             if add_if_not_exist:
@@ -373,12 +393,13 @@ class Dictionary(object):
             if consumer is not None:
                 consumer(word, idx)
             ids[i] = idx
-        if append_eos:
-            ids[nwords] = self.eos_index if not keyphrase else self.keyphrase_eos_index
+        if append_eos and append_sos:
+            ids[nwords + 1] = self.eos_index if not keyphrase else self.keyphrase_eos_index
+            ids[0] = self.sos_index if not keyphrase else self.keyphrase_sos_index
         return ids
 
     @staticmethod
-    def _add_file_to_dictionary_single_worker(filename, tokenize, eos_word, worker_id=0, num_workers=1):
+    def _add_file_to_dictionary_single_worker(filename, tokenize, eos_word, sos_word, worker_id=0, num_workers=1):
         counter = Counter()
         with open(filename, 'r', encoding='utf-8') as f:
             size = os.fstat(f.fileno()).st_size
@@ -393,13 +414,14 @@ class Dictionary(object):
                 for word in tokenize(line):
                     counter.update([word])
                 counter.update([eos_word])
+                counter.update([sos_word])
                 if f.tell() > end:
                     break
                 line = f.readline()
         return counter
 
     @staticmethod
-    def add_file_to_dictionary(filename, dict, tokenize, num_workers, eos_word):
+    def add_file_to_dictionary(filename, dict, tokenize, num_workers, eos_word, sos_word):
         def merge_result(counter):
             for w, c in sorted(counter.items()):
                 dict.add_symbol(w, c)
@@ -410,14 +432,14 @@ class Dictionary(object):
             for worker_id in range(num_workers):
                 results.append(pool.apply_async(
                     Dictionary._add_file_to_dictionary_single_worker,
-                    (filename, tokenize, eos_word, worker_id, num_workers)
+                    (filename, tokenize, eos_word, sos_word, worker_id, num_workers)
                 ))
             pool.close()
             pool.join()
             for r in results:
                 merge_result(r.get())
         else:
-            merge_result(Dictionary._add_file_to_dictionary_single_worker(filename, tokenize, eos_word))
+            merge_result(Dictionary._add_file_to_dictionary_single_worker(filename, tokenize, eos_word, sos_word))
 
 class TruncatedDictionary(object):
 

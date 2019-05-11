@@ -20,11 +20,10 @@ class KeyphraseBlockDataset(FairseqDataset):
         dataset (~torch.utils.data.Dataset): dataset to break into blocks
         sizes (List[int]): sentence lengths (required for 'complete' and 'eos')
     """
-    def __init__(self, dataset, sizes, dim_offsets, pad, stopwords, eos, mask):
+    def __init__(self, dataset, sizes, dim_offsets, pad, stopwords, mask):
         super().__init__()
         self.dataset = dataset
         self.pad = pad
-        self.eos = eos
         self.mask = mask
         self.stopwords = stopwords
 
@@ -88,7 +87,7 @@ class KeyphraseBlockDataset(FairseqDataset):
                 # setting 1: incldue context in the target
                 #self.tgt_sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
                 # setting 2: target only
-                self.tgt_sizes.append(2)#sum(sizes[target_idx:target_idx + 1]))
+                self.tgt_sizes.append(3)#sum(sizes[target_idx:target_idx + 1]))
                  
                 #self.sizes[block_idx] = sum(sizes[start_ds_idx:ds_idx + 1])
                 #print('sizes at idx: ', self.sizes[block_idx])
@@ -275,13 +274,13 @@ class KeyphraseBlockDataset(FairseqDataset):
                 nonstopword_target.append(item.item())
         if len(nonstopword_target) == 0:
            #print(target_sent)
-           nonstopword_target.append(target_sent[0].item()) 
+           nonstopword_target.append(target_sent[1].item()) 
            #sys.exit()
            #return None
 
         random.shuffle(nonstopword_target)
         tok_idx = random.randint(0, len(nonstopword_target)-1)
-        target = torch.tensor([nonstopword_target[tok_idx], target_sent[-1].item()])
+        target = torch.tensor([target_sent[0].item(), nonstopword_target[tok_idx], target_sent[-1].item()])
         #print(target)
         #print(target.size())
         #sys.exit()

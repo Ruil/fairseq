@@ -20,19 +20,22 @@ def infer_language_pair(path):
     return src, dst
 
 
-def collate_tokens(values, pad_idx, eos_idx, left_pad, move_eos_to_beginning=False):
+def collate_tokens(values, pad_idx, eos_idx, sos_idx, left_pad, move_eos_to_beginning=False):
     """Convert a list of 1d tensors into a padded 2d tensor."""
     size = max(v.size(0) for v in values)
     res = values[0].new(len(values), size).fill_(pad_idx)
 
     def copy_tensor(src, dst):
         #print('src: ', src)
+        #print(sos_idx)
         #sys.exit()
         assert dst.numel() == src.numel()
         if move_eos_to_beginning:
             assert src[-1] == eos_idx
+            assert src[0] == sos_idx
             dst[0] = eos_idx
-            dst[1:] = src[:-1]
+            dst[-1] = sos_idx
+            dst[1:-1] = src[1:-1]
         else:
             dst.copy_(src)
 

@@ -20,11 +20,10 @@ class SentenceBlockDataset(FairseqDataset):
         sizes (List[int]): sentence lengths (required for 'complete' and 'eos')
     """
 
-    def __init__(self, dataset, sizes, dim_offsets, pad, eos, mask):
+    def __init__(self, dataset, sizes, dim_offsets, pad, mask):
         super().__init__()
         self.dataset = dataset
         self.pad = pad
-        self.eos = eos
         self.mask = mask
 
         assert len(dataset) == len(sizes)
@@ -133,7 +132,7 @@ class SentenceBlockDataset(FairseqDataset):
             before, item.new([self.mask, self.mask, self.mask]), after
         ])      
         #print('idx: ', index)
-        #print('target: ', target)
+        print('target: ', target)
         #print('item: ', item)
         #print('source: ', source)
         #sys.exit()

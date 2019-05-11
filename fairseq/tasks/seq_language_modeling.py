@@ -212,15 +212,14 @@ class SeqLanguageModelingTask(FairseqTask):
                 loaded_datasets.append(
                     KeyphraseBlockDataset(
                         ds, ds.sizes, ds.dim_offsets, stopwords=self.dictionary.stopword_indices,
-                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos_index,
+                        pad=self.dictionary.pad(),
                         mask=self.dictionary.mask(),
                     )
                 )
             else:
                 loaded_datasets.append(
                     SentenceBlockDataset(
-                        ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(), eos=self.dictionary.eos(),
-                        mask=self.dictionary.mask(),
+                        ds, ds.sizes, ds.dim_offsets, pad=self.dictionary.pad(),  mask=self.dictionary.mask(),
                     )
                 )
 

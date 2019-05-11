@@ -54,6 +54,11 @@ class Binarizer:
                 )
                 #print('line: ', line)
                 #print('ids: ', ids)
+
+                line = f.readline()
+                if ids == None:
+                    continue
+
                 nseq += 1
                 if isinstance(ids, list):
                     ntok += sum([len(item) for item in ids])
@@ -61,7 +66,6 @@ class Binarizer:
                     ntok += len(ids)
                 #print('ntok: ', ntok)
                 consumer(ids)
-                line = f.readline()
         return {'nseq': nseq, 'nunk': sum(replaced.values()), 'ntok': ntok, 'replaced': replaced}
 
     @staticmethod

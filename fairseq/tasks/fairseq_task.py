@@ -51,7 +51,7 @@ class FairseqTask(object):
         """
         d = Dictionary(sentence_tokenizer=sentence_tokenizer, keyphrase=keyphrase)
         for filename in filenames:
-            Dictionary.add_file_to_dictionary(filename, d, tokenizer.tokenize_line, workers, d.eos_word if not keyphrase else d.keyphrase_eos_word)
+            Dictionary.add_file_to_dictionary(filename, d, tokenizer.tokenize_line, workers, d.eos_word if not keyphrase else d.keyphrase_eos_word, d.sos_word if not keyphrase else d.keyphrase_sos_word)
         d.finalize(threshold=threshold, nwords=nwords, padding_factor=padding_factor)
         return d
 

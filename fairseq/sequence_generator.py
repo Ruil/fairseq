@@ -457,7 +457,7 @@ class SequenceGenerator(object):
                 print('batch idxs: ', batch_idxs)
                 #print('token a: ', tokens.size())
                 #print(tokens)
-                sys.exit()
+                #sys.exit()
                 tokens_buf.resize_as_(tokens)
                 if attn is not None:
                     attn = attn.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, attn.size(1), -1)

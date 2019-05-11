@@ -7,7 +7,7 @@ from . import data_utils, FairseqDataset
 
 
 def collate(
-    samples, pad_idx, eos_idx, left_pad_source=True, left_pad_target=False,
+    samples, pad_idx, eos_idx, sos_idx, left_pad_source=True, left_pad_target=False,
     input_feeding=True,
 ):
     if len(samples) == 0:
@@ -19,7 +19,7 @@ def collate(
         #print(samples)
         return data_utils.collate_tokens(
             [s[key] for s in samples],
-            pad_idx, eos_idx, left_pad, move_eos_to_beginning,
+            pad_idx, eos_idx, sos_idx, left_pad, move_eos_to_beginning,
         )
 
     id = torch.LongTensor([s['id'] for s in samples])
@@ -235,11 +235,12 @@ class MonoLingualPairDataset(FairseqDataset):
                   target sentence of shape `(bsz, tgt_len)`. Padding will appear
                   on the left if *left_pad_target* is ``True``.
         """
-        idx = self.src_dict.eos() if not self.keyphrase else self.src_dict.keyphrase_eos_index
+        eos_idx = self.src_dict.eos() if not self.keyphrase else self.src_dict.keyphrase_eos_index
+        sos_idx = self.src_dict.sos() if not self.keyphrase else self.src_dict.keyphrase_sos_index
         #print(idx)
         #sys.exit()
         return collate(
-            samples, pad_idx=self.src_dict.pad(), eos_idx=idx,
+            samples, pad_idx=self.src_dict.pad(), eos_idx=eos_idx, sos_idx=sos_idx,
             left_pad_source=self.left_pad_source, left_pad_target=self.left_pad_target,
             input_feeding=self.input_feeding,
         )
