@@ -69,6 +69,9 @@ class SequenceGenerator(object):
         self.pad = tgt_dict.pad()
         self.unk = tgt_dict.unk()
         self.eos = tgt_dict.eos()
+        self.sos = tgt_dict.sos()
+        self.keyphrase_sos = tgt_dict.keyphrase_sos()
+        self.keyphrase_eos = tgt_dict.keyphrase_eos()
         self.vocab_size = len(tgt_dict)
         self.beam_size = beam_size
         # the max beam size is the dictionary size - 1, since we never select pad
@@ -125,8 +128,9 @@ class SequenceGenerator(object):
             if k != 'prev_output_tokens'
         }
 
+        #print('encoder_input: ', encoder_input)
         src_tokens = encoder_input['src_tokens']
-        src_lengths = (src_tokens.ne(self.eos) & src_tokens.ne(self.pad)).long().sum(dim=1)
+        src_lengths = (src_tokens.ne(self.sos) & src_tokens.ne(self.eos) & src_tokens.ne(self.pad)).long().sum(dim=1)
         input_size = src_tokens.size()
         # batch dimension goes first followed by source lengths
         bsz = input_size[0]
@@ -147,7 +151,9 @@ class SequenceGenerator(object):
         new_order = torch.arange(bsz).view(-1, 1).repeat(1, beam_size).view(-1)
         new_order = new_order.to(src_tokens.device).long()
         encoder_outs = model.reorder_encoder_out(encoder_outs, new_order)
-
+        #print('encoder_outs: ', encoder_outs)
+        #sys.exit() 
+          
         # initialize buffers
         scores = src_tokens.new(bsz * beam_size, max_len + 1).float().fill_(0)
         scores_buf = scores.clone()
@@ -308,14 +314,22 @@ class SequenceGenerator(object):
                 model.reorder_incremental_state(reorder_state)
                 model.reorder_encoder_out(encoder_outs, reorder_state)
             
-            #print('tokens[:, :step + 1]: ', tokens[:, :step + 1].size())
-            #print('tokens[:, :step + 1]: ', tokens[:, :step + 1])
-            #print('tokens: ', tokens.size())
+            print('tokens[:, :step + 1] size: ', tokens[:, :step + 1].size())
+            print('tokens[:, :step + 1]: ', tokens[:, :step + 1])
+            print('tokens: ', tokens.size())
             lprobs, avg_attn_scores = model.forward_decoder(tokens[:, :step + 1], encoder_outs, src_tokens=src_tokens)
-
+            print('encoder_outs: ', encoder_outs)
+            print('src_tokens: ', src_tokens)
+            print('lprobs: ', lprobs)
+            print('avg_attn_scores: ', avg_attn_scores)
+            #sys.exit()
             lprobs[:, self.pad] = -math.inf  # never select pad
-            lprobs[:, self.unk] -= self.unk_penalty  # apply unk penalty
-
+            lprobs[:, self.unk] -= self.unk_penalty  # apply unk penaty
+            lprobs[:, self.sos] = -math.inf  # never select sos
+            lprobs[:, self.keyphrase_sos] = -math.inf  # never select sos
+            lprobs[:, self.keyphrase_eos] = -math.inf  # never select keyphrase eos
+         
+            #print('self.no_repeat_ngram_size: ', self.no_repeat_ngram_size)
             if self.no_repeat_ngram_size > 0:
                 # for each beam and batch sentence, generate a list of previous ngrams
                 gen_ngrams = [{} for bbsz_idx in range(bsz * beam_size)]
@@ -337,6 +351,9 @@ class SequenceGenerator(object):
             scores_buf = scores_buf.type_as(lprobs)
             eos_bbsz_idx = buffer('eos_bbsz_idx')
             eos_scores = buffer('eos_scores', type_of=scores)
+            #print('step: ', step)
+            #print('max_len: ', max_len)
+            #sys.exit()
             if step < max_len:
                 self.search.set_src_lengths(src_lengths)
 
@@ -355,6 +372,8 @@ class SequenceGenerator(object):
                     for bbsz_idx in range(bsz * beam_size):
                         lprobs[bbsz_idx, banned_tokens[bbsz_idx]] = -math.inf
 
+                #print('prefix_tokens: ', prefix_tokens)
+                #print('prefix_tokens.size(1): ', prefix_tokens.size(1))
                 if prefix_tokens is not None and step < prefix_tokens.size(1):
                     probs_slice = lprobs.view(bsz, -1, lprobs.size(-1))[:, 0, :]
                     cand_scores = torch.gather(
@@ -366,7 +385,8 @@ class SequenceGenerator(object):
                         cand_scores.add_(scores[:, step - 1].view(bsz, beam_size).repeat(1, 2))
                     cand_indices = prefix_tokens[:, step].view(-1, 1).repeat(1, cand_size)
                     cand_beams = torch.zeros_like(cand_indices)
-
+                    #print('cand_indices chk 2: ', cand_indices)
+  
                     # handle prefixes of different lengths
                     partial_prefix_mask = prefix_tokens[:, step].eq(self.pad)
                     if partial_prefix_mask.any():
@@ -384,6 +404,12 @@ class SequenceGenerator(object):
                         lprobs.view(bsz, -1, self.vocab_size),
                         scores.view(bsz, beam_size, -1)[:, :, :step],
                     )
+                    print('lprobs view: ', lprobs.view(bsz, -1, self.vocab_size).size())
+                    print('lprobs view 110: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][110])
+                    print('lprobs view 109: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][109])
+                    print('scores view: ', scores.view(bsz, beam_size, -1)[:, :, :step])
+                    print('cand_indices chk 3: ', cand_indices)
+                    sys.exit()
             else:
                 # make probs contain cumulative scores for each hypothesis
                 lprobs.add_(scores[:, step - 1].unsqueeze(-1))
@@ -403,9 +429,14 @@ class SequenceGenerator(object):
             # hypotheses, with a range of values: [0, bsz*beam_size),
             # and dimensions: [bsz, cand_size]
             cand_bbsz_idx = cand_beams.add(bbsz_offsets)
-
+            #print('cand_bbsz_idx: ', cand_bbsz_idx)
+            #print('bbsz_offsets: ', bbsz_offsets)
+            #sys.exit() 
+           
             # finalize hypotheses that end in eos
             eos_mask = cand_indices.eq(self.eos)
+            #print('eos mask: ', eos_mask)
+            #print('cnd_indices: ', cand_indices)         
 
             finalized_sents = set()
             if step >= self.min_len:
@@ -425,10 +456,13 @@ class SequenceGenerator(object):
                     num_remaining_sent -= len(finalized_sents)
 
             assert num_remaining_sent >= 0
+            #print(num_remaining_sent)
+            #sys.exit()
             if num_remaining_sent == 0:
                 break
             assert step < max_len
-
+            #print(finalized_sents)
+            #sys.exit()
             if len(finalized_sents) > 0:
                 new_bsz = bsz - len(finalized_sents)
 
@@ -443,20 +477,21 @@ class SequenceGenerator(object):
                 cand_bbsz_idx = cand_beams.add(bbsz_offsets)
                 cand_scores = cand_scores[batch_idxs]
                 cand_indices = cand_indices[batch_idxs]
+                #print('cand_indices chk 1: ', cand_indices)
                 if prefix_tokens is not None:
                     prefix_tokens = prefix_tokens[batch_idxs]
                 src_lengths = src_lengths[batch_idxs]
 
                 scores = scores.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
                 scores_buf.resize_as_(scores)
-                #print('token b: ', tokens.size())
-                #print(tokens)
+                #print('token size: ', tokens.size())
+                #print('tokens ckp 2: ', tokens)
                 tokens = tokens.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
                 src_tokens = src_tokens.view(bsz, -1)[batch_idxs].view(new_bsz * beam_size, -1)
-                print('batch idxs: ', batch_idxs.size())
-                print('batch idxs: ', batch_idxs)
-                #print('token a: ', tokens.size())
-                #print(tokens)
+                #print('batch idxs: ', batch_idxs.size())
+                #print('batch idxs: ', batch_idxs)
+                #print('token size: ', tokens.size())
+                #print('tokens ckp 1: ', tokens)
                 #sys.exit()
                 tokens_buf.resize_as_(tokens)
                 if attn is not None:
@@ -497,15 +532,19 @@ class SequenceGenerator(object):
             active_bbsz_idx = active_bbsz_idx.view(-1)
             active_scores = active_scores.view(-1)
 
+            #print('tokens_buf: ', tokens_buf[:,:step+2])
             # copy tokens and scores for active hypotheses
             torch.index_select(
                 tokens[:, :step + 1], dim=0, index=active_bbsz_idx,
                 out=tokens_buf[:, :step + 1],
             )
+            #print('tokens_buf: ', tokens_buf[:,:step+2])
             torch.gather(
                 cand_indices, dim=1, index=active_hypos,
                 out=tokens_buf.view(bsz, beam_size, -1)[:, :, step + 1],
             )
+            #print('cand_indices: ', cand_indices)
+            #print('tokens_buf: ', tokens_buf[:,:step+2])
             if step > 0:
                 torch.index_select(
                     scores[:, :step], dim=0, index=active_bbsz_idx,
@@ -524,8 +563,9 @@ class SequenceGenerator(object):
                 )
 
             # swap buffers
-            #print('tokens c: ', tokens.size())
-            #print('tokens_buf: ', tokens_buf.size()) 
+            #print('tokens: ', tokens[:,:step+2])
+            #print('tokens_buf: ', tokens_buf[:,:step+2])
+            #sys.exit()
             tokens, tokens_buf = tokens_buf, tokens
             scores, scores_buf = scores_buf, scores
             if attn is not None:
@@ -538,6 +578,8 @@ class SequenceGenerator(object):
         for sent in range(len(finalized)):
             finalized[sent] = sorted(finalized[sent], key=lambda r: r['score'], reverse=True)
 
+        #print('finalized: ', finalized)
+        #sys.exit()
         return finalized
 
 

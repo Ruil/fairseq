@@ -33,9 +33,10 @@ def collate_tokens(values, pad_idx, eos_idx, sos_idx, left_pad, move_eos_to_begi
         if move_eos_to_beginning:
             assert src[-1] == eos_idx
             assert src[0] == sos_idx
-            dst[0] = eos_idx
-            dst[-1] = sos_idx
-            dst[1:-1] = src[1:-1]
+            dst[0] = eos_idx    
+            dst[1:] = src[:-1]
+            #dst[-1] = sos_idx
+            #dst[1:-1] = src[1:-1]
         else:
             dst.copy_(src)
 
