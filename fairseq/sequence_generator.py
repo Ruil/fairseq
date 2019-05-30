@@ -314,14 +314,14 @@ class SequenceGenerator(object):
                 model.reorder_incremental_state(reorder_state)
                 model.reorder_encoder_out(encoder_outs, reorder_state)
             
-            print('tokens[:, :step + 1] size: ', tokens[:, :step + 1].size())
-            print('tokens[:, :step + 1]: ', tokens[:, :step + 1])
-            print('tokens: ', tokens.size())
+            #print('tokens[:, :step + 1] size: ', tokens[:, :step + 1].size())
+            #print('tokens[:, :step + 1]: ', tokens[:, :step + 1])
+            #print('tokens: ', tokens.size())
             lprobs, avg_attn_scores = model.forward_decoder(tokens[:, :step + 1], encoder_outs, src_tokens=src_tokens)
-            print('encoder_outs: ', encoder_outs)
-            print('src_tokens: ', src_tokens)
-            print('lprobs: ', lprobs)
-            print('avg_attn_scores: ', avg_attn_scores)
+            #print('encoder_outs: ', encoder_outs)
+            #print('src_tokens: ', src_tokens)
+            #print('lprobs: ', lprobs)
+            #print('avg_attn_scores: ', avg_attn_scores)
             #sys.exit()
             lprobs[:, self.pad] = -math.inf  # never select pad
             lprobs[:, self.unk] -= self.unk_penalty  # apply unk penaty
@@ -404,12 +404,12 @@ class SequenceGenerator(object):
                         lprobs.view(bsz, -1, self.vocab_size),
                         scores.view(bsz, beam_size, -1)[:, :, :step],
                     )
-                    print('lprobs view: ', lprobs.view(bsz, -1, self.vocab_size).size())
-                    print('lprobs view 110: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][110])
-                    print('lprobs view 109: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][109])
-                    print('scores view: ', scores.view(bsz, beam_size, -1)[:, :, :step])
-                    print('cand_indices chk 3: ', cand_indices)
-                    sys.exit()
+                    #print('lprobs view: ', lprobs.view(bsz, -1, self.vocab_size).size())
+                    #print('lprobs view 110: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][110])
+                    #print('lprobs view 109: ', lprobs.view(bsz, -1, self.vocab_size)[0][0][109])
+                    #print('scores view: ', scores.view(bsz, beam_size, -1)[:, :, :step])
+                    #print('cand_indices chk 3: ', cand_indices)
+                    #sys.exit()
             else:
                 # make probs contain cumulative scores for each hypothesis
                 lprobs.add_(scores[:, step - 1].unsqueeze(-1))

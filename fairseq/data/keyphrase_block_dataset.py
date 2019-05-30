@@ -71,8 +71,8 @@ class KeyphraseBlockDataset(FairseqDataset):
             #print('cur size: ', size)
             ds_idx = start_ds_idx + size - 1
             for start_offset in range(size):
-                if random.uniform(0, 1) > 0.2:
-                    continue
+                #if random.uniform(0, 1) > 0.2:
+                #    continue
 
                 self.block_to_dataset_index.append((
                     start_ds_idx,  # starting index in dataset
