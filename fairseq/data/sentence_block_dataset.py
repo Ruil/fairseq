@@ -9,6 +9,7 @@ import math
 
 import numpy as np
 import torch
+import random
 
 from . import FairseqDataset
 
@@ -28,7 +29,7 @@ class SentenceBlockDataset(FairseqDataset):
         self.mask = mask
 
         assert len(dataset) == len(sizes)
-         
+        random.seed(9)        
         sizes = np.array(sizes, dtype=int)
         dim_offsets = np.array(dim_offsets, dtype=int)
         total_size = sum(sizes)
@@ -67,6 +68,9 @@ class SentenceBlockDataset(FairseqDataset):
             #print('cur size: ', size)
             ds_idx = start_ds_idx + size - 1
             for start_offset in range(size):
+                if random.uniform(0, 1) > 0.5:
+                    continue
+
                 self.block_to_dataset_index[block_idx] = (
                     start_ds_idx,  # starting index in dataset
                     start_offset,  # starting offset within starting index
