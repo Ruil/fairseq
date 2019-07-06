@@ -235,7 +235,7 @@ class MonoLingualPairDataset(FairseqDataset):
                   target sentence of shape `(bsz, tgt_len)`. Padding will appear
                   on the left if *left_pad_target* is ``True``.
         """
-        idx = self.src_dict.eos() if not self.keyphrase else self.src_dict.keyphrase_eos_index
+        idx = self.src_dict.eos()
         #print(idx)
         #sys.exit()
         return collate(

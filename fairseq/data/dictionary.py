@@ -19,8 +19,8 @@ from fairseq.data import data_utils
 
 class Dictionary(object):
     """A mapping from symbols to consecutive integers"""
-    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', keyphrase_eos='</ks>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
-        self.unk_word, self.pad_word, self.eos_word, self.mask_word, self.keyphrase_eos_word = unk, pad, eos, mask, keyphrase_eos
+    def __init__(self, pad='<pad>', eos='</s>', unk='<unk>', mask='<mask>', sentence_tokenizer=False, keyphrase=False, copy_net=False):
+        self.unk_word, self.pad_word, self.eos_word, self.mask_word = unk, pad, eos, mask
         self.symbols = []
         self.count = []
         self.indices = {}
@@ -30,7 +30,6 @@ class Dictionary(object):
         self.eos_index = self.add_symbol(eos)
         self.unk_index = self.add_symbol(unk)
         self.mask_index = self.add_symbol(mask)
-        self.keyphrase_eos_index = self.add_symbol(keyphrase_eos)
         self.nspecial = len(self.symbols)
         self.sentence_tokenizer = sentence_tokenizer
         self.keyphrase = keyphrase
@@ -71,7 +70,7 @@ class Dictionary(object):
             else:
                 return self[i]
 
-        sent = ' '.join(token_string(i) for i in tensor if i != self.eos() and i != self.keyphrase_eos())
+        sent = ' '.join(token_string(i) for i in tensor if i != self.eos())
         return data_utils.process_bpe_symbol(sent, bpe_symbol)
 
     def unk_string(self, escape=False):
@@ -102,7 +101,6 @@ class Dictionary(object):
         self.stopword_indices.add(self.pad_index)
         self.stopword_indices.add(self.eos_index)
         self.stopword_indices.add(self.unk_index)
-        self.stopword_indices.add(self.keyphrase_eos_index)
         print('stopword len: ', len(self.stopword_indices))
         print('stopwords: ', len(stopwords))
         
@@ -173,10 +171,6 @@ class Dictionary(object):
     def eos(self):
         """Helper to get index of end-of-sentence symbol"""
         return self.eos_index
-
-    def keyphrase_eos(self):
-        """Helper to get index of end-of-sentence symbol"""
-        return self.keyphrase_eos_index
 
     def unk(self):
         """Helper to get index of unk symbol"""
@@ -268,7 +262,7 @@ class Dictionary(object):
 
     def dummy_sentence(self, length):
         t = torch.Tensor(length).uniform_(self.nspecial + 1, len(self)).long()
-        t[-1] = self.eos() if not self.keyphrase else self.keyphrase_eos_index
+        t[-1] = self.eos()
         return t
 
     def sentence_copy_encode_line(self, line, line_tokenizer=tokenize_line, add_if_not_exist=True,
@@ -307,8 +301,8 @@ class Dictionary(object):
                 copy_ids[j] = copy_idx
 
             if append_eos:
-                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
-                copy_ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+                ids[nwords] = self.eos_index
+                copy_ids[nwords] = self.eos_index
 
             sentence_ids.append(ids)
             sentence_copy_ids.append(copy_ids)
@@ -347,7 +341,7 @@ class Dictionary(object):
             #print('self.keyphrase_eos_index: ', self.keyphrase_eos_index)
             #sys.exit()
             if append_eos:
-                ids[nwords] = self.eos_index if not self.keyphrase else self.keyphrase_eos_index
+                ids[nwords] = self.eos_index 
             #print('ids: ', ids)
             #sys.exit()
             sentence_ids.append(ids)
@@ -374,7 +368,7 @@ class Dictionary(object):
                 consumer(word, idx)
             ids[i] = idx
         if append_eos:
-            ids[nwords] = self.eos_index if not keyphrase else self.keyphrase_eos_index
+            ids[nwords] = self.eos_index
         return ids
 
     @staticmethod

@@ -202,7 +202,7 @@ class LanguageModelingTask(FairseqTask):
                 loaded_datasets.append(
                     KeyphraseBlockDataset(
                         ds, ds.sizes, self.args.tokens_per_sample,
-                        pad=self.dictionary.pad(), eos=self.dictionary.keyphrase_eos(),
+                        pad=self.dictionary.pad(), eos=self.dictionary.eos(),
                         break_mode=self.args.sample_break_mode, include_targets=True,
                     )
                 )
