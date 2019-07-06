@@ -10,6 +10,7 @@ Translate pre-processed data with a trained model.
 """
 
 import torch
+import random
 
 from fairseq import bleu, options, progress_bar, tasks, utils
 from fairseq.meters import StopwatchMeter, TimeMeter
@@ -128,7 +129,8 @@ def main(args):
                     if has_target:
                         target_str = tgt_dict.string(target_tokens, args.remove_bpe, escape_unk=True)
 
-                if not args.quiet:
+                keep = random.random() > 0.9
+                if not args.quiet and keep:
                     if src_dict is not None:
                         print('S-{}\t{}'.format(sample_id, src_str))
                     if has_target:
@@ -145,7 +147,7 @@ def main(args):
                         remove_bpe=args.remove_bpe,
                     )
 
-                    if not args.quiet:
+                    if not args.quiet and keep:
                         print('H-{}\t{}\t{}'.format(sample_id, hypo['score'], hypo_str))
                         print('P-{}\t{}'.format(
                             sample_id,
